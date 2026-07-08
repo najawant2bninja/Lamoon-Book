@@ -347,6 +347,31 @@
     document.getElementById('mobileToggle')?.addEventListener('click',()=>document.getElementById('navLinks')?.classList.toggle('open'));
     document.getElementById('logoutBtn')?.addEventListener('click',()=>{ setCurrentUser(null); toast('ออกจากระบบแล้ว'); setTimeout(()=>location.href='index.html',600); });
   }
+
+  function renderFooter(){
+  const footer = document.getElementById('appFooter');
+  if(!footer) return;
+  footer.innerHTML = `
+    <div class="container footer-content">
+      <div class="footer-brand">
+        <h3>Lamoon Book</h3>
+        <p>ร้านหนังสือออนไลน์ ครบจบในที่เดียว</p>
+      </div>
+      <div class="footer-links">
+        <h4>ช่วยเหลือ</h4>
+        <a href="support.html">แจ้งปัญหา</a>
+        <a href="tracking.html">ติดตามพัสดุ</a>
+      </div>
+      <div class="footer-contact">
+        <h4>ติดต่อเรา</h4>
+        <a href="mailto:support@lamoonbook.com">support@lamoonbook.com</a>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <p>© 2026 Lamoon Book. สงวนลิขสิทธิ์</p>
+    </div>`;
+}
+
   function bindGlobalActions(root=document){
     root.querySelectorAll('[data-cart]').forEach(btn=>btn.addEventListener('click',()=>addToCart(btn.dataset.cart,1)));
     root.querySelectorAll('[data-fav]').forEach(btn=>btn.addEventListener('click',()=>{
@@ -373,8 +398,8 @@
     favorites, saveFavorites, toggleFavorite, orders, saveOrders, addresses, saveAddresses,
     staff, saveStaff, shippingOptions, makeOrder, approveOrder, rejectOrder, updateOrderStage,
     customerReceive, getOrderStatusIndex, stepHtml, statusLabel, statusBadge, timelineList,
-    bookCard, toast, requireLogin, requireRole, renderNav, bindGlobalActions, findProduct,
+    bookCard, toast, requireLogin, requireRole, renderNav,renderFooter, bindGlobalActions, findProduct,
     dateTH, escapeHtml, productStockStatus
   };
-  document.addEventListener('DOMContentLoaded',()=>{ renderNav(); bindGlobalActions(); });
+document.addEventListener('DOMContentLoaded',()=>{ renderNav(); renderFooter(); bindGlobalActions(); });
 })();
