@@ -329,7 +329,7 @@
         <div class="container navbar">
           <a class="brand" href="index.html">
             <span class="brand-badge">${icon('book')}</span>
-            <span class="brand-text">ร้านหนังสือ<span>Online Book Store</span></span>
+            <span class="brand-text">Lamoon Book<span>Online Book Store</span></span>
           </a>
           <button class="mobile-toggle" id="mobileToggle" aria-label="เปิดเมนู">${icon('menu')}</button>
           <div class="nav-links" id="navLinks">
