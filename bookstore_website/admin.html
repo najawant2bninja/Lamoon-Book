@@ -1,30 +1,131 @@
 <!doctype html>
 <html lang="th">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>แอดมิน | WarmRead Store</title>
-  <link rel="stylesheet" href="assets/common.css" />
-  <link rel="stylesheet" href="admin.css" />
-</head>
-<body data-page="admin">
-  <div id="appNav"></div>
-  <main>
-    <section class="section">
-      <div class="container">
-        <div class="section-title"><div><h2>Admin Dashboard</h2><p>ยอดขาย สต็อก พนักงาน และคำสั่งซื้อ</p></div></div>
-        <div class="grid grid-4" id="adminKpis"></div>
-        <div class="admin-layout">
-          <section class="card"><h3>กราฟสรุปผล</h3><div class="chart-grid"><canvas id="salesChart" width="420" height="250"></canvas><canvas id="categoryChart" width="420" height="250"></canvas></div></section>
-          <section class="card"><h3>สินค้าใกล้หมด</h3><div id="lowStock"></div></section>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>แอดมิน | WarmRead Store</title>
+    <link rel="stylesheet" href="assets/common.css" />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body data-page="admin">
+    <div id="appNav"></div>
+    <main>
+      <section class="section">
+        <div class="container">
+          <div class="section-title">
+            <div>
+              <h2>Admin Dashboard</h2>
+              <p>ยอดขาย สต็อก พนักงาน และคำสั่งซื้อ</p>
+            </div>
+          </div>
+          <div class="grid grid-4" id="adminKpis"></div>
+          <div class="admin-layout">
+            <section class="card">
+              <h3>กราฟสรุปผล</h3>
+              <div class="chart-grid">
+                <canvas id="salesChart" width="420" height="250"></canvas
+                ><canvas id="categoryChart" width="420" height="250"></canvas>
+              </div>
+            </section>
+            <section class="card">
+              <h3>สินค้าใกล้หมด</h3>
+              <div id="lowStock"></div>
+            </section>
+          </div>
+          <section class="section inner-section">
+            <div class="grid grid-2">
+              <div class="card">
+                <h3>จัดการสินค้า</h3>
+                <form id="productForm" class="form-grid">
+                  <input
+                    class="input"
+                    name="title"
+                    placeholder="ชื่อหนังสือ"
+                    required
+                  /><input
+                    class="input"
+                    name="author"
+                    placeholder="ผู้แต่ง"
+                    required
+                  /><input
+                    class="input"
+                    name="category"
+                    placeholder="หมวดหมู่"
+                    required
+                  /><input
+                    class="input"
+                    name="price"
+                    type="number"
+                    placeholder="ราคา"
+                    required
+                  /><input
+                    class="input"
+                    name="stock"
+                    type="number"
+                    placeholder="สต็อก"
+                    required
+                  />
+                  <div class="cover-upload">
+                    <div class="upload-panel">
+                      <label class="upload-btn">
+                        <span>เลือกรูปปกหนังสือ</span>
+                        <input
+                          class="input"
+                          name="coverFile"
+                          type="file"
+                          accept="image/*"
+                        />
+                      </label>
+                    </div>
+                    <div class="image-preview-wrap">
+                      <div class="preview-label">ตัวอย่างปก</div>
+                      <img id="coverPreview" class="cover-preview" src="" alt="Preview รูปปก" hidden />
+                    </div>
+                  </div>
+                  <button class="btn btn-primary" type="submit">
+                    เพิ่มสินค้า
+                  </button>
+                </form>
+                <div class="table-wrap" style="margin-top: 16px">
+                  <table id="productTable"></table>
+                </div>
+              </div>
+              <div class="card">
+                <h3>จัดการพนักงาน</h3>
+                <form id="staffForm" class="form-grid">
+                  <input
+                    class="input"
+                    name="name"
+                    placeholder="ชื่อพนักงาน"
+                    required
+                  /><input
+                    class="input"
+                    name="email"
+                    type="email"
+                    placeholder="อีเมล"
+                    required
+                  /><input
+                    class="input"
+                    name="position"
+                    placeholder="ตำแหน่ง"
+                    required
+                  /><button class="btn btn-primary" type="submit">
+                    เพิ่มพนักงาน
+                  </button>
+                </form>
+                <div id="staffList" class="grid" style="margin-top: 16px"></div>
+              </div>
+            </div>
+          </section>
+          <section class="card">
+            <h3>การอนุมัติคำสั่งซื้อ</h3>
+            <div class="table-wrap"><table id="approvalTable"></table></div>
+          </section>
         </div>
-        <section class="section inner-section"><div class="grid grid-2"><div class="card"><h3>จัดการสินค้า</h3><form id="productForm" class="form-grid"><input class="input" name="title" placeholder="ชื่อหนังสือ" required><input class="input" name="author" placeholder="ผู้แต่ง" required><input class="input" name="category" placeholder="หมวดหมู่" required><input class="input" name="price" type="number" placeholder="ราคา" required><input class="input" name="stock" type="number" placeholder="สต็อก" required><button class="btn btn-primary" type="submit">เพิ่มสินค้า</button></form><div class="table-wrap" style="margin-top:16px"><table id="productTable"></table></div></div><div class="card"><h3>จัดการพนักงาน</h3><form id="staffForm" class="form-grid"><input class="input" name="name" placeholder="ชื่อพนักงาน" required><input class="input" name="email" type="email" placeholder="อีเมล" required><input class="input" name="position" placeholder="ตำแหน่ง" required><button class="btn btn-primary" type="submit">เพิ่มพนักงาน</button></form><div id="staffList" class="grid" style="margin-top:16px"></div></div></div></section>
-        <section class="card"><h3>การอนุมัติคำสั่งซื้อ</h3><div class="table-wrap"><table id="approvalTable"></table></div></section>
-      </div>
-    </section>
-  </main>
-<div id="appFooter" class="footer"></div>
-  <script src="assets/common.js"></script>
-  <script src="admin.js"></script>
-</body>
+      </section>
+    </main>
+    <div id="appFooter" class="footer"></div>
+    <script src="assets/common.js"></script>
+    <script src="admin.js"></script>
+  </body>
 </html>

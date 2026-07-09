@@ -32,14 +32,50 @@ function renderApprovals(){
   document.getElementById('approvalTable').innerHTML=`<thead><tr><th>คำสั่งซื้อ</th><th>ลูกค้า</th><th>ยอดเงิน</th><th>ชำระเงิน</th><th>ผู้อนุมัติ</th><th>สถานะ</th></tr></thead><tbody>${rows || '<tr><td colspan="6">ยังไม่มีคำสั่งซื้อ</td></tr>'}</tbody>`;
 }
 function bindForms(){
+  const coverInput=document.querySelector('[name="coverFile"]');
+  const coverPreview=document.getElementById('coverPreview');
+  const resetPreview=()=>{
+    if(coverPreview){
+      coverPreview.src='';
+      coverPreview.hidden=true;
+    }
+  };
+  if(coverInput){
+    coverInput.onchange=()=>{
+      const file=coverInput.files?.[0];
+      if(file){
+        const reader=new FileReader();
+        reader.onload=()=>{
+          if(coverPreview){
+            coverPreview.src=reader.result;
+            coverPreview.hidden=false;
+          }
+        };
+        reader.readAsDataURL(file);
+      } else {
+        resetPreview();
+      }
+    };
+  }
   document.getElementById('productForm').onsubmit=e=>{
     e.preventDefault();
     const fd=new FormData(e.target);
-    const product={id:'b'+Date.now(),title:fd.get('title'),author:fd.get('author'),category:fd.get('category'),price:Number(fd.get('price')),stock:Number(fd.get('stock')),status:BookApp.productStockStatus(Number(fd.get('stock'))),cover:'cover-'+((BookApp.products().length%6)+1),rating:4.5,sold:0,desc:'รายละเอียดหนังสือที่เพิ่มโดยผู้ดูแลระบบ'};
-    BookApp.saveProducts([product,...BookApp.products()]);
-    e.target.reset();
-    BookApp.toast('เพิ่มสินค้าแล้ว');
-    renderAll();
+    const file=fd.get('coverFile');
+    const saveProduct=coverUrl=>{
+      const product={id:'b'+Date.now(),title:fd.get('title'),author:fd.get('author'),category:fd.get('category'),price:Number(fd.get('price')),stock:Number(fd.get('stock')),status:BookApp.productStockStatus(Number(fd.get('stock'))),cover:'cover-'+((BookApp.products().length%6)+1),coverUrl:coverUrl||'',rating:4.5,sold:0,desc:'รายละเอียดหนังสือที่เพิ่มโดยผู้ดูแลระบบ'};
+      BookApp.saveProducts([product,...BookApp.products()]);
+      e.target.reset();
+      resetPreview();
+      BookApp.toast('เพิ่มสินค้าแล้ว');
+      renderAll();
+    };
+    if(file && file.size){
+      const reader=new FileReader();
+      reader.onload=()=>saveProduct(reader.result);
+      reader.readAsDataURL(file);
+    } else {
+      saveProduct('');
+    }
   };
   document.getElementById('staffForm').onsubmit=e=>{
     e.preventDefault();
