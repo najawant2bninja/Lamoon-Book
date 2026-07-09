@@ -43,19 +43,23 @@
   };
   function icon(name) { return icons[name] || icons.book; }
 
+
   const seedProducts = [
-    { id: 'b001', title: 'กลยุทธ์ร้านหนังสือออนไลน์', author: 'อ.ปรียาภัทร มาลี', category: 'ธุรกิจ', price: 285, stock: 146, status: 'available', cover: 'cover-1', rating: 4.8, sold: 221, desc: 'คู่มือเริ่มต้นร้านค้าออนไลน์ ครอบคลุมสินค้า การตลาด และการดูแลลูกค้า' },
-    { id: 'b002', title: 'JavaScript สำหรับมือใหม่', author: 'อังศุมาลี สีหนา', category: 'เทคโนโลยี', price: 320, stock: 82, status: 'available', cover: 'cover-2', rating: 4.9, sold: 380, desc: 'พื้นฐาน DOM, Local Storage และ Event สำหรับสร้างเว็บโต้ตอบได้' },
-    { id: 'b003', title: 'คลังสินค้าไม่พลาด', author: 'ณชพัฒน์ สัมฤทธิ์ยากรณ์', category: 'โลจิสติกส์', price: 245, stock: 64, status: 'available', cover: 'cover-3', rating: 4.6, sold: 156, desc: 'การจองสินค้า ตัดสต็อก คืนสต็อก และลดความผิดพลาดในการจัดส่ง' },
-    { id: 'b004', title: 'UX/UI ฉบับร้านค้าไทย', author: 'สุทธิพงศ์ สัมฤทธิ์', category: 'ออกแบบ', price: 390, stock: 190, status: 'available', cover: 'cover-4', rating: 4.7, sold: 301, desc: 'แนวทางออกแบบหน้าร้านออนไลน์ให้ใช้งานง่ายบนมือถือและคอมพิวเตอร์' },
-    { id: 'b005', title: 'อ่านใจนักอ่าน', author: 'ชิดชนก จำปาดง', category: 'จิตวิทยา', price: 210, stock: 112, status: 'available', cover: 'cover-5', rating: 4.5, sold: 177, desc: 'เข้าใจพฤติกรรมผู้อ่านและระบบแนะนำหมวดหมู่หนังสือ' },
-    { id: 'b006', title: 'Node.js Backend Workshop', author: 'CSI204 Team', category: 'เทคโนโลยี', price: 430, stock: 72, status: 'available', cover: 'cover-6', rating: 4.9, sold: 418, desc: 'แนวทางพัฒนา Backend/API สำหรับระบบร้านค้าออนไลน์' },
-    { id: 'b007', title: 'บัญชีผู้ใช้และความปลอดภัย', author: 'Workshop Press', category: 'เทคโนโลยี', price: 299, stock: 58, status: 'available', cover: 'cover-1', rating: 4.4, sold: 118, desc: 'สมัครสมาชิก เข้าสู่ระบบ โปรไฟล์ รหัสผ่าน และสิทธิ์ตามบทบาท' },
-    { id: 'b008', title: 'การบริการลูกค้าออนไลน์', author: 'Paper House', category: 'บริการ', price: 225, stock: 128, status: 'available', cover: 'cover-2', rating: 4.6, sold: 205, desc: 'การติดต่อสอบถาม แจ้งปัญหา และติดตามสถานะคำสั่งซื้อ' },
-    { id: 'b009', title: 'Dashboard เพื่อการตัดสินใจ', author: 'Book Data Lab', category: 'ธุรกิจ', price: 355, stock: 97, status: 'available', cover: 'cover-3', rating: 4.8, sold: 264, desc: 'แดชบอร์ดรายงานยอดขาย คำสั่งซื้อ และหมวดหมู่ขายดี' },
-    { id: 'b010', title: 'ระบบขนส่งสำหรับ E-Commerce', author: 'LogiRead', category: 'โลจิสติกส์', price: 260, stock: 144, status: 'available', cover: 'cover-4', rating: 4.3, sold: 135, desc: 'เลือกรูปแบบจัดส่ง คำนวณค่าขนส่ง และอัปเดตสถานะพัสดุ' },
-    { id: 'b011', title: 'เรื่องสั้นใต้แสงส้ม', author: 'Orange Novel', category: 'นิยาย', price: 185, stock: 215, status: 'available', cover: 'cover-5', rating: 4.7, sold: 500, desc: 'รวมเรื่องสั้นอ่านง่าย บรรยากาศอบอุ่น เหมาะสำหรับพักผ่อน' },
-    { id: 'b012', title: 'การเงินส่วนบุคคลฉบับนักศึกษา', author: 'Money Book', category: 'การเงิน', price: 199, stock: 89, status: 'available', cover: 'cover-6', rating: 4.5, sold: 248, desc: 'พื้นฐานการออมและวางแผนค่าใช้จ่ายสำหรับวัยเรียน' }
+{ id: 'b001', title: 'อ่านชะตาวันสิ้นโลก เล่ม 1', author: 'Sing N song', category: 'นิยายแฟนตาซี', price: 285, stock: 146, status: 'available', cover: 'assets/cover/b001.jpg', createdAt: '2026-01-03T09:00:00.000Z', rating: 4.8, sold: 221, desc: 'เรื่องราวของชายผู้เป็นผู้อ่านนิยายเพียงคนเดียวที่รู้อนาคตของโลก เมื่อเหตุการณ์ในนิยายกลายเป็นความจริง เขาต้องใช้ความรู้ทั้งหมดเพื่อเอาชีวิตรอด' },
+    { id: 'b002', title: 'อ่านชะตาวันสิ้นโลก เล่ม 2', author: 'Sing N song', category: 'นิยายแฟนตาซี', price: 320, stock: 82, status: 'available', cover: 'assets/cover/b002.jpg', createdAt: '2026-01-06T09:00:00.000Z', rating: 4.9, sold: 380, desc: 'การเดินทางดำเนินต่อท่ามกลางบททดสอบที่ยากขึ้น พร้อมการเปิดเผยความลับของโลกและการเผชิญหน้ากับศัตรูที่แข็งแกร่งกว่าเดิม' },
+    { id: 'b003', title: 'อ่านชะตาวันสิ้นโลก เล่ม 3', author: 'Sing N song', category: 'นิยายแฟนตาซี', price: 245, stock: 64, status: 'available', cover: 'assets/cover/b003.jpg', createdAt: '2026-01-10T09:00:00.000Z', rating: 4.6, sold: 156, desc: 'เรื่องราวเข้าสู่ช่วงเข้มข้น เมื่อการตัดสินใจของตัวเอกส่งผลต่อชะตากรรมของผู้คนและอนาคตของโลกทั้งใบ' },
+    { id: 'b004', title: 'Hunter × Hunter เล่ม 1', author: 'โยชิฮิโระ โทงาชิ', category: 'มังงะแอ็กชัน', price: 390, stock: 190, status: 'available', cover: 'assets/cover/b004.jpg', createdAt: '2026-01-14T09:00:00.000Z', rating: 4.7, sold: 301, desc: 'เรื่องราวการออกเดินทางของกอร์น ฟรีคส์ เด็กหนุ่มผู้มุ่งมั่นที่จะเป็นฮันเตอร์และตามหาพ่อของเขา' },
+    { id: 'b005', title: 'Hunter × Hunter เล่ม 2', author: 'โยชิฮิโระ โทงาชิ', category: 'มังงะแอ็กชัน', price: 210, stock: 112, status: 'available', cover: 'assets/cover/b005.jpg', createdAt: '2026-01-17T09:00:00.000Z', rating: 4.5, sold: 177, desc: 'การทดสอบฮันเตอร์ดำเนินต่อไป พร้อมมิตรภาพและอุปสรรคที่ผู้เข้าสอบต้องเผชิญ' },
+    { id: 'b006', title: 'Hunter × Hunter เล่ม 3', author: 'โยชิฮิโระ โทงาชิ', category: 'มังงะแอ็กชัน', price: 430, stock: 72, status: 'available', cover: 'assets/cover/b006.jpg', createdAt: '2026-01-21T09:00:00.000Z', rating: 4.9, sold: 418, desc: 'การเดินทางของกอร์น คิรัว คุราปิก้า และเลโอริโอ เข้าสู่บททดสอบที่ยากลำบากยิ่งขึ้น' },
+    { id: 'b007', title: 'Hunter × Hunter เล่ม 4', author: 'โยชิฮิโระ โทงาชิ', category: 'มังงะแอ็กชัน', price: 299, stock: 58, status: 'available', cover: 'assets/cover/b007.jpg', createdAt: '2026-01-25T09:00:00.000Z', rating: 4.4, sold: 118, desc: 'การผจญภัยดำเนินต่อพร้อมการเผชิญหน้ากับศัตรูและความท้าทายใหม่ในการเป็นฮันเตอร์' },
+    { id: 'b008', title: 'ไม่ยากถ้าอยากมีมารยาทดี', author: 'ปัก ฮย็อนจ็อง', category: 'การ์ตูนความรู้', price: 179, stock: 128, status: 'available', cover: 'assets/cover/b008.jpg', createdAt: '2026-01-29T09:00:00.000Z', rating: 4.6, sold: 205, desc: 'หนังสือการ์ตูนความรู้ที่สอนเรื่องมารยาทในชีวิตประจำวัน ผ่านเรื่องราวสนุก เข้าใจง่าย เหมาะสำหรับผู้อ่านทุกวัย' },
+    { id: 'b009', title: 'ศรีธนญชัย', author: 'สุพรรณิการ์', category: 'วรรณกรรมไทย', price: 259, stock: 95, status: 'available', cover: 'assets/cover/b009.jpg', createdAt: '2026-02-02T09:00:00.000Z', rating: 4.7, sold: 183, desc: 'วรรณกรรมไทยคลาสสิกที่ถ่ายทอดเรื่องราวของศรีธนญชัย ผู้มีไหวพริบและปฏิภาณในการแก้ปัญหาด้วยอุบายและสติปัญญา' },
+    { id: 'b010', title: 'เทรดแบบกราฟเปล่า ทำกำไรด้วยแท่งเทียน', author: 'ลภัสรดา เพ็งสุข', category: 'การลงทุน', price: 399, stock: 68, status: 'available', cover: 'assets/cover/b010.jpg', createdAt: '2026-02-06T09:00:00.000Z', rating: 4.8, sold: 247, desc: 'แนะนำการวิเคราะห์กราฟแท่งเทียนเพื่อการลงทุน เหมาะสำหรับผู้เริ่มต้นและผู้ที่ต้องการพัฒนาทักษะการเทรดในตลาดหุ้น คริปโต และฟอเร็กซ์' },
+    { id: 'b011', title: 'จิตวิทยาสายดาร์ก', author: 'Dr.Hiro', category: 'จิตวิทยา', price: 295, stock: 84, status: 'available', cover: 'assets/cover/b011.jpg', createdAt: '2026-02-10T09:00:00.000Z', rating: 4.8, sold: 326, desc: 'หนังสือที่อธิบายหลักจิตวิทยาเกี่ยวกับการสื่อสาร การโน้มน้าวใจ และการทำความเข้าใจพฤติกรรมของผู้คน พร้อมยกตัวอย่างสถานการณ์ที่พบได้ในชีวิตประจำวัน' },
+    { id: 'b012', title: 'โลจิสติกส์-โซ่อุปทาน : การออกแบบและจัดการเบื้องต้น', author: 'รศ.ดร. ประจวบ กล่อมจิตร', category: 'โลจิสติกส์', price: 349, stock: 76, status: 'available', cover: 'assets/cover/b012.jpg', createdAt: '2026-02-14T09:00:00.000Z', rating: 4.7, sold: 142, desc: 'หนังสือแนะนำพื้นฐานด้านโลจิสติกส์และการจัดการโซ่อุปทาน ครอบคลุมการออกแบบระบบ การขนส่ง การจัดเก็บสินค้า และการบริหารกระบวนการเพื่อเพิ่มประสิทธิภาพขององค์กร' },
+    { id: 'b013', title: 'ผมคนนี้อยากหนีจากบทพระรอง', author: 'Sleepy-C', category: 'นิยายแปลเกาหลี', price: 430, stock: 54, status: 'available', cover: 'assets/cover/b013.jpg', createdAt: '2026-02-18T09:00:00.000Z', rating: 4.9, sold: 392, desc: 'นิยายแฟนตาซีโรแมนซ์ที่เล่าเรื่องของตัวละครผู้ตื่นขึ้นมาในโลกนิยายและพบว่าตัวเองได้รับบทเป็นพระรอง เขาจึงพยายามเปลี่ยนชะตากรรมและหลีกเลี่ยงเส้นทางเดิมของเรื่องราว' },
+    { id: 'b014', title: 'มั่งคั่งทั้งชีวิต (Money Mastery)', author: 'ภัทรพล ศิลปาจารย์', category: 'การเงินและการลงทุน', price: 395, stock: 87, status: 'available', cover: 'assets/cover/b014.jpg', createdAt: '2026-02-22T09:00:00.000Z', rating: 4.8, sold: 412, desc: 'หนังสือที่รวบรวมแนวคิดด้านการเงิน การลงทุน และการวางแผนชีวิต เพื่อสร้างความมั่งคั่งทั้งด้านเงิน เวลา และสุขภาพ เหมาะสำหรับผู้ที่ต้องการพัฒนาวินัยทางการเงินและสร้างความมั่นคงในระยะยาว' },
+    { id: 'b015', title: 'Money 101 เริ่มต้นนับหนึ่งสู่ชีวิตการเงินอุดมสุข', author: 'จักรพงษ์ เมษพันธุ์ (The Money Coach)', category: 'การเงินและการลงทุน', price: 325, stock: 102, status: 'available', cover: 'assets/cover/b015.jpg', createdAt: '2026-02-26T09:00:00.000Z', rating: 4.9, sold: 538, desc: 'คู่มือพื้นฐานด้านการเงินส่วนบุคคล ครอบคลุมการวางแผนรายรับรายจ่าย การออม การลงทุน และการบริหารหนี้ เหมาะสำหรับผู้ที่ต้องการเริ่มต้นสร้างความมั่นคงทางการเงิน' },
   ];
 
   const seedUsers = [
@@ -300,6 +304,7 @@
     if (order.orderStatus === 'packing') return 1;
     return 0;
   }
+
   function bookCard(product) {
     const fav = favorites().includes(product.id);
     const avail = availableStock(product);
@@ -314,9 +319,9 @@
     return `
       <article class="book-card ${outOfStock ? 'is-out-of-stock' : ''}" data-id="${product.id}" data-category="${escapeHtml(product.category)}">
         <button class="icon-btn fav-btn ${fav ? 'active' : ''}" data-fav="${product.id}" title="บันทึกรายการโปรด" aria-label="บันทึกรายการโปรด">${icon(fav ? 'heartFill' : 'heart')}</button>
-        <a href="book-detail.html?id=${product.id}" class="book-cover ${product.cover}">
+        <a href="book-detail.html?id=${product.id}" class="book-cover">
+          <img src="${product.cover}" alt="${escapeHtml(product.title)}" class="cover-img" onerror="this.onerror=null;this.src='assets/cover/default.jpg'">
           ${coverStockBadge}
-          <strong class="cover-title">${escapeHtml(product.title)}</strong>
         </a>
         <div class="book-info">
           <div class="pill-row"><span class="badge orange">${escapeHtml(product.category)}</span>${stockBadge}</div>
@@ -360,26 +365,26 @@
   }
 
 
-  function renderNav(){
-  const nav = document.getElementById('appNav');
-  if(!nav) return;
-  const user = currentUser();
-  const page = document.body.dataset.page || '';
-  const cartCount = cart().reduce((s,i)=>s+i.qty,0);
-  const favCount = favorites().length;
-  const isStaffOnly = user?.role === 'staff';
-  const adminLinks = user?.role === 'admin' ? `<a class="${page==='admin'?'active':''}" href="admin.html">Admin</a>` : '';
-  const staffLinks = user?.role === 'staff' || user?.role === 'admin' ? `<a class="${page==='staff'?'active':''}" href="staff.html">Staff</a>` : '';
+  function renderNav() {
+    const nav = document.getElementById('appNav');
+    if (!nav) return;
+    const user = currentUser();
+    const page = document.body.dataset.page || '';
+    const cartCount = cart().reduce((s, i) => s + i.qty, 0);
+    const favCount = favorites().length;
+    const isStaffOnly = user?.role === 'staff';
+    const adminLinks = user?.role === 'admin' ? `<a class="${page === 'admin' ? 'active' : ''}" href="admin.html">Admin</a>` : '';
+    const staffLinks = user?.role === 'staff' || user?.role === 'admin' ? `<a class="${page === 'staff' ? 'active' : ''}" href="staff.html">Staff</a>` : '';
 
-  const customerLinks = isStaffOnly ? '' : `
-    <a class="${page==='home'?'active':''}" href="index.html">หน้าหลัก</a>
-    <a class="${page==='products'?'active':''}" href="products.html">หนังสือ</a>
-    <a class="${page==='favorites'?'active':''}" href="favorites.html">รายการโปรด <span class="nav-count">${favCount}</span></a>
-    <a class="${page==='cart'?'active':''}" href="cart.html">ตะกร้า <span class="nav-count">${cartCount}</span></a>
-    <a class="${page==='tracking'?'active':''}" href="tracking.html">ติดตาม</a>
-    <a class="${page==='support'?'active':''}" href="support.html">แจ้งปัญหา</a>`;
+    const customerLinks = isStaffOnly ? '' : `
+    <a class="${page === 'home' ? 'active' : ''}" href="index.html">หน้าหลัก</a>
+    <a class="${page === 'products' ? 'active' : ''}" href="products.html">หนังสือ</a>
+    <a class="${page === 'favorites' ? 'active' : ''}" href="favorites.html">รายการโปรด <span class="nav-count">${favCount}</span></a>
+    <a class="${page === 'cart' ? 'active' : ''}" href="cart.html">ตะกร้า <span class="nav-count">${cartCount}</span></a>
+    <a class="${page === 'tracking' ? 'active' : ''}" href="tracking.html">ติดตาม</a>
+    <a class="${page === 'support' ? 'active' : ''}" href="support.html">แจ้งปัญหา</a>`;
 
-  nav.innerHTML = `
+    nav.innerHTML = `
     <header class="site-header">
       <div class="container navbar">
         <a class="brand" href="index.html">
@@ -390,13 +395,13 @@
         <div class="nav-links" id="navLinks">
           ${customerLinks}
           ${staffLinks}${adminLinks}
-          ${user ? `<a class="${page==='profile'?'active':''}" href="profile.html">${escapeHtml(user.name)}</a><button id="logoutBtn">ออกจากระบบ</button>` : `<a class="${page==='login'?'active':''}" href="login.html">เข้าสู่ระบบ</a>`}
+          ${user ? `<a class="${page === 'profile' ? 'active' : ''}" href="profile.html">${escapeHtml(user.name)}</a><button id="logoutBtn">ออกจากระบบ</button>` : `<a class="${page === 'login' ? 'active' : ''}" href="login.html">เข้าสู่ระบบ</a>`}
         </div>
       </div>
     </header>`;
-  document.getElementById('mobileToggle')?.addEventListener('click',()=>document.getElementById('navLinks')?.classList.toggle('open'));
-  document.getElementById('logoutBtn')?.addEventListener('click',()=>{ setCurrentUser(null); toast('ออกจากระบบแล้ว'); setTimeout(()=>location.href='index.html',600); });
-}
+    document.getElementById('mobileToggle')?.addEventListener('click', () => document.getElementById('navLinks')?.classList.toggle('open'));
+    document.getElementById('logoutBtn')?.addEventListener('click', () => { setCurrentUser(null); toast('ออกจากระบบแล้ว'); setTimeout(() => location.href = 'index.html', 600); });
+  }
 
   function renderFooter() {
     const footer = document.getElementById('appFooter');
