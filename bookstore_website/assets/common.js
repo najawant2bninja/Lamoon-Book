@@ -365,7 +365,7 @@
   const customerLinks = isStaffOnly ? '' : `
     <a class="${page==='home'?'active':''}" href="index.html">หน้าหลัก</a>
     <a class="${page==='products'?'active':''}" href="products.html">หนังสือ</a>
-    <a class="${page==='favorites'?'active':''}" href="favorites.html">โปรด <span class="nav-count">${favCount}</span></a>
+    <a class="${page==='favorites'?'active':''}" href="favorites.html">รายการโปรด <span class="nav-count">${favCount}</span></a>
     <a class="${page==='cart'?'active':''}" href="cart.html">ตะกร้า <span class="nav-count">${cartCount}</span></a>
     <a class="${page==='tracking'?'active':''}" href="tracking.html">ติดตาม</a>
     <a class="${page==='support'?'active':''}" href="support.html">แจ้งปัญหา</a>`;
@@ -409,7 +409,7 @@
       </div>
     </div>
     <div class="container footer-bottom">
-      <p>© 2026 Lamoon Book. สงวนลิขสิทธิ์</p>
+      <p>© 2026 Lamoon Book</p>
     </div>`;
   }
 
