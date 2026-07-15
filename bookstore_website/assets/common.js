@@ -92,23 +92,24 @@
 
   function read(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch (e) { return fallback; } }
   function write(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
-  function initData() {
-    if (!localStorage.getItem(STORAGE.products)) write(STORAGE.products, seedProducts);
-    else {
-      const savedProducts = read(STORAGE.products, seedProducts);
-      const migratedProducts = savedProducts.map((product, index) => product.isbn ? product : { ...product, isbn: demoIsbn(index + 1) });
-      if (migratedProducts.some((product, index) => product.isbn !== savedProducts[index].isbn)) write(STORAGE.products, migratedProducts);
-    }
-    if (!localStorage.getItem(STORAGE.users)) write(STORAGE.users, seedUsers);
-    if (!localStorage.getItem(STORAGE.staff)) write(STORAGE.staff, seedStaff);
-    if (!localStorage.getItem(STORAGE.cart)) write(STORAGE.cart, []);
-    if (!localStorage.getItem(STORAGE.fav)) write(STORAGE.fav, []);
-    if (!localStorage.getItem(STORAGE.orders)) write(STORAGE.orders, []);
-    if (!localStorage.getItem(STORAGE.addresses)) write(STORAGE.addresses, [
-      { id: 'a001', name: 'บ้าน', receiver: 'ลูกค้าทดสอบ', phone: '080-111-2222', detail: '99/9 ถนนหนังสือ แขวงอ่านเพลิน เขตเมือง กรุงเทพมหานคร 10110' }
-    ]);
+  function scopedKey(base) {
+  const user = read(STORAGE.current, null);
+  return `${base}_${user?.id || 'guest'}`;
+}
+function initData() {
+  if (!localStorage.getItem(STORAGE.products)) write(STORAGE.products, seedProducts);
+  else {
+    const savedProducts = read(STORAGE.products, seedProducts);
+    const migratedProducts = savedProducts.map((product, index) => product.isbn ? product : { ...product, isbn: demoIsbn(index + 1) });
+    if (migratedProducts.some((product, index) => product.isbn !== savedProducts[index].isbn)) write(STORAGE.products, migratedProducts);
   }
-  initData();
+  if (!localStorage.getItem(STORAGE.users)) write(STORAGE.users, seedUsers);
+  if (!localStorage.getItem(STORAGE.staff)) write(STORAGE.staff, seedStaff);
+  if (!localStorage.getItem(STORAGE.orders)) write(STORAGE.orders, []);
+  if (!localStorage.getItem(STORAGE.addresses)) write(STORAGE.addresses, [
+    { id: 'a001', name: 'บ้าน', receiver: 'ลูกค้าทดสอบ', phone: '080-111-2222', detail: '99/9 ถนนหนังสือ แขวงอ่านเพลิน เขตเมือง กรุงเทพมหานคร 10110' }
+  ]);
+}
 
   function formatTHB(n) { return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', maximumFractionDigits: 0 }).format(Number(n) || 0); }
   function products() { return read(STORAGE.products, seedProducts); }
@@ -118,12 +119,19 @@
   function staff() { return read(STORAGE.staff, seedStaff); }
   function saveStaff(items) { write(STORAGE.staff, items); }
   function currentUser() { return read(STORAGE.current, null); }
-  function setCurrentUser(user) { user ? write(STORAGE.current, user) : localStorage.removeItem(STORAGE.current); renderNav(); }
-  function cart() { return read(STORAGE.cart, []); }
-  function saveCart(items) { write(STORAGE.cart, items); renderNav(); }
-  function favorites() { return read(STORAGE.fav, []); }
-  function saveFavorites(items) { write(STORAGE.fav, items); }
-  function orders() { return read(STORAGE.orders, []); }
+function setCurrentUser(user) {
+  if (!user) {
+    localStorage.removeItem(STORAGE.current);
+    renderNav();
+    return;
+  }
+  write(STORAGE.current, user);
+  renderNav();
+}
+  function cart() { return read(scopedKey(STORAGE.cart), []); }
+function saveCart(items) { write(scopedKey(STORAGE.cart), items); renderNav(); }
+function favorites() { return read(scopedKey(STORAGE.fav), []); }
+function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(); }  function orders() { return read(STORAGE.orders, []); }
   function saveOrders(items) { write(STORAGE.orders, items); }
   function addresses() { return read(STORAGE.addresses, []); }
   function saveAddresses(items) { write(STORAGE.addresses, items); }
@@ -439,19 +447,24 @@
     </div>`;
   }
 
-  function bindGlobalActions(root = document) {
-    root.querySelectorAll('[data-cart]').forEach(btn => btn.addEventListener('click', () => {
+function bindGlobalActions(root = document) {
+  document.addEventListener('click', (e) => {
+    const cartBtn = e.target.closest('[data-cart]');
+    if (cartBtn) {
       if (!requireLogin()) return;
-      addToCart(btn.dataset.cart, 1);
-    }));
-    root.querySelectorAll('[data-fav]').forEach(btn => btn.addEventListener('click', () => {
+      addToCart(cartBtn.dataset.cart, 1);
+      return;
+    }
+    const favBtn = e.target.closest('[data-fav]');
+    if (favBtn) {
       if (!requireLogin()) return;
-      const active = toggleFavorite(btn.dataset.fav);
-      btn.classList.toggle('active', active);
-      btn.innerHTML = icon(active ? 'heartFill' : 'heart');
+      const active = toggleFavorite(favBtn.dataset.fav);
+      favBtn.classList.toggle('active', active);
+      favBtn.innerHTML = icon(active ? 'heartFill' : 'heart');
       renderNav();
-    }));
-  }
+    }
+  });
+}
   function dateTH(iso) { return new Date(iso).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }); }
   function timelineList(order) {
     const items = order.timeline || [];

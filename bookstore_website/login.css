@@ -9,7 +9,12 @@
   box-shadow:0 30px 60px rgba(0,0,0,.12);
 }
 
-
+.demo-users .btn-small.active{
+  background:var(--orange, #d98d3f);
+  border-color:var(--orange, #d98d3f);
+  color:#fff;
+  box-shadow:0 8px 20px rgba(217,141,63,.28);
+}
 .auth-hero{
  position:relative;
   min-height:520px;
