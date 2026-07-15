@@ -109,7 +109,12 @@
   background:#fff;
   box-shadow:none;
 }
-
+.demo-users .btn-small.active{
+  background:var(--orange, #d98d3f);
+  border-color:var(--orange, #d98d3f);
+  color:#fff;
+  box-shadow:0 8px 20px rgba(217,141,63,.28);
+}
 .auth-card h2{
   font-family: Georgia, "Times New Roman", serif;
   font-size:30px;
