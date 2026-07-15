@@ -46,7 +46,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!file) { BookApp.toast('กรุณาแนบสลิปก่อน'); return; }
     if (!/^\d{10}$/.test(phone)) { BookApp.toast('กรุณากรอกเบอร์โทรติดต่อ 10 หลักเป็นตัวเลขเท่านั้น'); return; }
     if (!slipData) { BookApp.toast('ระบบกำลังอ่านไฟล์สลิป กรุณากดอีกครั้ง'); return; }
-    const order = BookApp.makeOrder(draft, file.name, slipData, slipType);
+    const order = BookApp.makeOrder(
+      draft,
+      file.name,
+      slipData,
+      slipType,
+      phone,
+    );
+
+    BookApp.toast("ส่งสลิปแล้ว รอพนักงานตรวจสอบ");
     showOrderSuccessModal(order.id);
   });
 
