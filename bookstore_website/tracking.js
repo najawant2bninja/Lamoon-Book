@@ -57,7 +57,28 @@ function render(){
         <div class="log-head"></div>
         <ul class="timeline">${BookApp.timelineList(o)}</ul>
       </section>
-      <div class="order-actions">${o.deliveryStatus === 'in_transit' ? `<button class="btn btn-success" data-receive="${o.id}">ยืนยันได้รับสินค้า</button>`:''}<a class="btn btn-secondary" href="support.html">ติดต่อสอบถาม</a></div>
+      <div class="order-actions">${o.deliveryStatus === 'in_transit' ? `<button class="btn btn-success" data-receive="${o.id}">ยืนยันได้รับสินค้า</button>`:''}${o.paymentStatus === 'rejected' && (o.resubmitCount||0) < 2 ? `<button class="btn btn-primary" data-reattach="${o.id}">แนบหลักฐานใหม่</button><input type="file" accept="image/*,.pdf" data-reattach-input="${o.id}" style="display:none">` : ''}<a class="btn btn-secondary" href="support.html">ติดต่อสอบถาม</a></div>
     </article>`).join('');
   root.querySelectorAll('[data-receive]').forEach(btn=>btn.onclick=()=>{ const res=BookApp.customerReceive(btn.dataset.receive); BookApp.toast(res.message); render(); });
+  root.querySelectorAll('[data-reattach]').forEach(btn=>btn.onclick=()=>{
+    root.querySelector(`[data-reattach-input="${btn.dataset.reattach}"]`)?.click();
+  });
+  root.querySelectorAll('[data-reattach-input]').forEach(input=>input.onchange=()=>{
+    const file = input.files[0];
+    if(!file) return;
+    const orderId = input.dataset.reattachInput;
+    const order = BookApp.orders().find(o=>o.id===orderId);
+    const attempts = order?.resubmitCount || 0;
+    if(attempts === 1){
+      const proceed = confirm('นี่เป็นการแนบหลักฐานครั้งสุดท้าย หากไม่ผ่านการตรวจสอบ คำสั่งซื้อนี้จะถูกยกเลิกถาวร ต้องการดำเนินการต่อหรือไม่?');
+      if(!proceed){ input.value=''; return; }
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const res = BookApp.resubmitSlip(orderId, file.name, reader.result, file.type);
+      BookApp.toast(res.message);
+      render();
+    };
+    reader.readAsDataURL(file);
+  });
 }
