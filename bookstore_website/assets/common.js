@@ -199,15 +199,18 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     ];
   }
   //--------------------------------------------------------------------------------------------//
-  function makeOrder(draft, slipName, slipData, slipType) {
+  function makeOrder(draft, slipName, slipData, slipType, contactPhone) {
     const current = currentUser();
-    const id = 'ORD' + new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 12);
+    const stamp = Date.now().toString(36).toUpperCase();
+    const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const id = `ORD${stamp}${suffix}`;
     const order = {
       id,
       createdAt: new Date().toISOString(),
       customerId: current?.id || 'guest',
       customerName: current?.name || 'ลูกค้า',
       customerEmail: current?.email || '',
+      customerPhone: contactPhone || draft.address?.phone || current?.phone || '',
       items: draft.items,
       subtotal: draft.subtotal,
       shipping: draft.shipping,
