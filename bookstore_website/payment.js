@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('paymentSummary').innerHTML = `<h3 style="margin-top:0;color:var(--brown)">ยอดที่ต้องชำระ</h3>${draft.items.map(i => `<div class="summary-row"><span>${BookApp.escapeHtml(i.title)} × ${i.qty}</span><strong>${BookApp.formatTHB(i.price * i.qty)}</strong></div>`).join('')}<div class="summary-row"><span>รวมสินค้า</span><strong>${BookApp.formatTHB(draft.subtotal)}</strong></div><div class="summary-row"><span>${draft.shippingMethod ? BookApp.escapeHtml(draft.shippingMethod.name) : 'ค่าจัดส่ง'}</span><strong>${BookApp.formatTHB(draft.shipping)}</strong></div><div class="summary-row total-row"><span>ยอดสุทธิ</span><span>${BookApp.formatTHB(draft.total)}</span></div>${draft.address ? `<p class="helper">ที่อยู่: ${BookApp.escapeHtml(draft.address.detail)}</p>` : ''}`;
   const input = document.getElementById('slipInput');
   const preview = document.getElementById('slipPreview');
+  const phoneInput = document.getElementById('phoneInput');
   let slipData = '';
   let slipType = '';
 
@@ -30,6 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
     reader.readAsDataURL(file);
   }
 
+  phoneInput?.addEventListener('input', () => {
+    phoneInput.value = phoneInput.value.replace(/\D/g, '').slice(0, 10);
+  });
   input.addEventListener('change', () => {
     const file = input.files[0];
     document.getElementById('fileName').textContent = file?.name || 'ยังไม่ได้เลือกไฟล์';
@@ -38,9 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('paymentForm').addEventListener('submit', e => {
     e.preventDefault();
     const file = input.files[0];
+    const phone = String(phoneInput?.value || '').replace(/\D/g, '');
     if (!file) { BookApp.toast('กรุณาแนบสลิปก่อน'); return; }
+    if (!/^\d{10}$/.test(phone)) { BookApp.toast('กรุณากรอกเบอร์โทรติดต่อ 10 หลักเป็นตัวเลขเท่านั้น'); return; }
     if (!slipData) { BookApp.toast('ระบบกำลังอ่านไฟล์สลิป กรุณากดอีกครั้ง'); return; }
-    const order = BookApp.makeOrder(draft, file.name, slipData, slipType);
+    const order = BookApp.makeOrder(draft, file.name, slipData, slipType, phone);
     BookApp.toast('ส่งสลิปแล้ว รอพนักงานตรวจสอบ');
     setTimeout(() => location.href = 'tracking.html?order=' + order.id, 700);
   });

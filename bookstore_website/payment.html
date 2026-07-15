@@ -20,6 +20,7 @@
             <div class="notice">หลังแนบสลิป สถานะจะเป็นรอตรวจสลิป และสินค้าเป็นจองสินค้า</div>
             <form id="paymentForm" class="grid">
               <label class="upload-box"><input type="file" id="slipInput" accept="image/*,.pdf" required><span id="uploadLabel">แนบสลิปการโอนเงิน</span><small id="fileName">ยังไม่ได้เลือกไฟล์</small></label>
+              <div class="form-group"><label>เบอร์โทรติดต่อ</label><input class="input" id="phoneInput" name="phone" placeholder="กรอกเบอร์โทร 10 หลัก" inputmode="numeric" maxlength="10" required></div>
               <div id="slipPreview" class="slip-preview empty">ยังไม่มีตัวอย่างสลิป</div>
               <button class="btn btn-primary" type="submit">ยืนยันการแนบสลิป</button>
             </form>
