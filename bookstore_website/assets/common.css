@@ -104,7 +104,7 @@ tr:last-child td{border-bottom:0}
 .book-cover{height:210px;border-radius:18px;padding:16px;color:#fff;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(135deg,#674020,#df7a2a);position:relative;overflow:hidden}
 .book-cover:before{content:"";position:absolute;inset:12px;border:1px solid rgba(255,255,255,.32);border-radius:14px}
 .book-cover:after{content:"";position:absolute;right:18px;top:18px;width:34px;height:74%;border-radius:999px;background:rgba(255,255,255,.12)}
-.cover-stock-badge{position:absolute;left:16px;top:16px;z-index:2;display:inline-flex;align-items:center;border:1px solid #f0b4a8;border-radius:999px;background:#fff;color:var(--danger);padding:7px 11px;font-size:12px;font-weight:1000;box-shadow:0 10px 22px rgba(129,31,20,.18)}
+.cover-stock-badge{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;display:inline-flex;align-items:center;border:1px solid #f0b4a8;border-radius:999px;background:#fff;color:var(--danger);padding:7px 11px;font-size:12px;font-weight:1000;box-shadow:0 10px 22px rgba(129,31,20,.18)}
 .book-card.is-out-of-stock .book-cover{filter:saturate(.72)}
 .cover-icon{position:relative;z-index:1;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.16);backdrop-filter:blur(2px)}
 .cover-icon .svg-icon{width:25px;height:25px}
@@ -621,8 +621,9 @@ tr:last-child td {
 }
 .cover-stock-badge {
   position: absolute;
-  left: 16px;
-  top: 16px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   z-index: 2;
   display: inline-flex;
   align-items: center;

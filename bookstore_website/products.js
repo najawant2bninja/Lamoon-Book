@@ -14,6 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const stockVal = stock ? stock.value : 'all';
     if (stockVal === 'ready') items = items.filter(p => BookApp.availableStock(p) > 0);
     if (stockVal === 'low') items = items.filter(p => BookApp.availableStock(p) < 100);
+    items.sort((a, b) => {
+      const aOut = BookApp.availableStock(a) <= 0;
+      const bOut = BookApp.availableStock(b) <= 0;
+      return aOut === bOut ? 0 : aOut ? 1 : -1;
+    });
     grid.innerHTML = items.length ? items.map(BookApp.bookCard).join('') : `<div class="empty-state" style="grid-column:1/-1"><div class="icon">${BookApp.icon('search')}</div><h3>ไม่พบหนังสือ</h3><p>ลองเปลี่ยนคำค้นหาหรือหมวดหมู่</p></div>`;
     BookApp.bindGlobalActions(grid);
   }
