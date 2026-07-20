@@ -17,8 +17,7 @@ function renderProducts(){
   const rows=BookApp.products().map(p=>`<tr><td><strong>${BookApp.escapeHtml(p.title)}</strong><br><span class="helper">${BookApp.escapeHtml(p.author)}</span></td><td>${BookApp.escapeHtml(p.category)}</td><td>${BookApp.formatTHB(p.price)}</td><td><input class="input" style="width:90px" data-stock="${p.id}" type="number" value="${p.stock}"></td><td>${BookApp.statusBadge('product', p.status || BookApp.productStockStatus(p.stock))}</td><td><button class="btn btn-danger btn-small" data-del-product="${p.id}">${BookApp.icon('trash')} ลบ</button></td></tr>`).join('');
   document.getElementById('productTable').innerHTML=`<thead><tr><th>หนังสือ</th><th>หมวด</th><th>ราคา</th><th>สต็อก</th><th>สถานะ</th><th></th></tr></thead><tbody>${rows}</tbody>`;
   document.querySelectorAll('[data-stock]').forEach(i=>i.onchange=()=>{
-    BookApp.saveProducts(BookApp.products().map(p=>p.id===i.dataset.stock?{...p,stock:Number(i.value),status:BookApp.productStockStatus(Number(i.value))}:p));
-    renderAll();
+    fetch(`http://localhost:3000/api/products/${i.dataset.stock}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({stock:Number(i.value)})}).then(r=>r.json()).then(data=>{if(!data.ok)throw new Error();BookApp.toast('อัปเดตสต็อกแล้ว');renderAll();}).catch(()=>BookApp.toast('ไม่สามารถอัปเดตสต็อกได้'));
   });
   document.querySelectorAll('[data-del-product]').forEach(b=>b.onclick=()=>{BookApp.saveProducts(BookApp.products().filter(p=>p.id!==b.dataset.delProduct));BookApp.toast('ลบสินค้าแล้ว');renderAll();});
 }
@@ -63,7 +62,7 @@ function bindForms(){
     const file=fd.get('coverFile');
     const saveProduct=coverUrl=>{
       const product={id:'b'+Date.now(),title:fd.get('title'),author:fd.get('author'),isbn:fd.get('isbn'),category:fd.get('category'),price:Number(fd.get('price')),stock:Number(fd.get('stock')),status:BookApp.productStockStatus(Number(fd.get('stock'))),cover:'cover-'+((BookApp.products().length%6)+1),coverUrl:coverUrl||'',rating:4.5,sold:0,desc:'รายละเอียดหนังสือที่เพิ่มโดยผู้ดูแลระบบ'};
-      BookApp.saveProducts([product,...BookApp.products()]);
+      fetch('http://localhost:3000/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...product,cover:product.coverUrl})}).catch(()=>BookApp.toast('ไม่สามารถเพิ่มสินค้าได้'));
       e.target.reset();
       resetPreview();
       BookApp.toast('เพิ่มสินค้าแล้ว');

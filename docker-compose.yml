@@ -1,0 +1,52 @@
+version: '3.9'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: lamoonbook-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: lamoonbook_db
+      MYSQL_USER: lamoonbook
+      MYSQL_PASSWORD: lamoonbook123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    command: --default-authentication-plugin=mysql_native_password
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: lamoonbook-phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: root123
+    ports:
+      - "8080:80"
+
+  api:
+    build:
+      context: ./backend
+    container_name: lamoonbook-api
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    environment:
+      PORT: 3000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: lamoonbook_db
+      DB_USER: lamoonbook
+      DB_PASSWORD: lamoonbook123
+      CORS_ORIGIN: http://localhost:5500
+    ports:
+      - "3000:3000"
+
+volumes:
+  mysql_data:

@@ -33,39 +33,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   input.addEventListener('change', () => {
     const file = input.files[0];
+    if (file && file.size > 2 * 1024 * 1024) {
+      BookApp.toast('ไฟล์ใหญ่เกินไป กรุณาเลือกไฟล์ไม่เกิน 2MB');
+      input.value = '';
+      document.getElementById('fileName').textContent = 'ยังไม่ได้เลือกไฟล์';
+      renderPreview(null);
+      return;
+    }
     document.getElementById('fileName').textContent = file?.name || 'ยังไม่ได้เลือกไฟล์';
     renderPreview(file);
   });
   document.getElementById('paymentForm').addEventListener('submit', e => {
     e.preventDefault();
     const file = input.files[0];
-    if (!file) { showAlertModal('กรุณาแนบสลิป'); return; }
-    if (!slipData) { showAlertModal('กรุณาแนบสลิป'); return; }
-    const order = BookApp.makeOrder(
-      draft,
-      file.name,
-      slipData,
-      slipType,
-    );
-
-    showOrderSuccessModal(order.id);
+    if (!file) { BookApp.toast('กรุณาแนบสลิปก่อน'); return; }
+    if (!slipData) { BookApp.toast('ระบบกำลังอ่านไฟล์สลิป กรุณากดอีกครั้ง'); return; }
+    const order = BookApp.makeOrder(draft, file.name, slipData, slipType);
+    if (!order) return;
+    BookApp.toast('ส่งสลิปแล้ว รอพนักงานตรวจสอบ');
+    setTimeout(() => location.href = 'tracking.html?order=' + order.id, 700);
   });
-
-  function showAlertModal(message) {
-    document.querySelector('.modal-backdrop')?.remove();
-    const modal = document.createElement('div');
-    modal.className = 'modal-backdrop';
-    modal.innerHTML = `<div class="modal-card order-success-card"><p class="order-success-text">${BookApp.escapeHtml(message)}</p><button class="btn btn-primary" id="alertOk">ตกลง</button></div>`;
-    document.body.appendChild(modal);
-    document.getElementById('alertOk').onclick = () => modal.remove();
-  }
-
-  function showOrderSuccessModal(orderId) {
-    document.querySelector('.modal-backdrop')?.remove();
-    const modal = document.createElement('div');
-    modal.className = 'modal-backdrop';
-    modal.innerHTML = `<div class="modal-card order-success-card"><p class="order-success-text">ได้รับคำสั่งซื้อแล้ว รอการยืนยันการชำระเงินโดยพนักงาน</p><button class="btn btn-primary" id="orderSuccessOk">ตกลง</button></div>`;
-    document.body.appendChild(modal);
-    document.getElementById('orderSuccessOk').onclick = () => { location.href = 'tracking.html?order=' + orderId; };
-  }
 });

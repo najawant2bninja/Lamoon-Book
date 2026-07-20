@@ -12,6 +12,8 @@
     selectedShipping: 'bookStore_selectedShipping_v2'
   };
 
+  const API_BASE = 'http://localhost:3000/api';
+
   const icons = {
     book: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg>',
     books: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5z"/><path d="M8 3v18"/><path d="M20 7v14"/></svg>',
@@ -43,42 +45,36 @@
   };
   function icon(name) { return icons[name] || icons.book; }
 
-
-  const seedProducts = [
-{ id: 'b001', title: 'อ่านชะตาวันสิ้นโลก เล่ม 1', author: 'Sing N song', category: 'นิยายแฟนตาซี', price: 285, stock: 146, status: 'available', cover: 'assets/cover/b001.jpg', createdAt: '2026-01-03T09:00:00.000Z', rating: 4.8, sold: 221, desc: 'เรื่องราวของชายผู้เป็นผู้อ่านนิยายเพียงคนเดียวที่รู้อนาคตของโลก เมื่อเหตุการณ์ในนิยายกลายเป็นความจริง เขาต้องใช้ความรู้ทั้งหมดเพื่อเอาชีวิตรอด' },
-    { id: 'b002', title: 'อ่านชะตาวันสิ้นโลก เล่ม 2', author: 'Sing N song', category: 'นิยายแฟนตาซี', price: 320, stock: 82, status: 'available', cover: 'assets/cover/b002.jpg', createdAt: '2026-01-06T09:00:00.000Z', rating: 4.9, sold: 380, desc: 'การเดินทางดำเนินต่อท่ามกลางบททดสอบที่ยากขึ้น พร้อมการเปิดเผยความลับของโลกและการเผชิญหน้ากับศัตรูที่แข็งแกร่งกว่าเดิม' },
-    { id: 'b003', title: 'อ่านชะตาวันสิ้นโลก เล่ม 3', author: 'Sing N song', category: 'นิยายแฟนตาซี', price: 245, stock: 64, status: 'available', cover: 'assets/cover/b003.jpg', createdAt: '2026-01-10T09:00:00.000Z', rating: 4.6, sold: 156, desc: 'เรื่องราวเข้าสู่ช่วงเข้มข้น เมื่อการตัดสินใจของตัวเอกส่งผลต่อชะตากรรมของผู้คนและอนาคตของโลกทั้งใบ' },
-    { id: 'b004', title: 'Hunter × Hunter เล่ม 1', author: 'โยชิฮิโระ โทงาชิ', category: 'มังงะแอ็กชัน', price: 390, stock: 190, status: 'available', cover: 'assets/cover/b004.jpg', createdAt: '2026-01-14T09:00:00.000Z', rating: 4.7, sold: 301, desc: 'เรื่องราวการออกเดินทางของกอร์น ฟรีคส์ เด็กหนุ่มผู้มุ่งมั่นที่จะเป็นฮันเตอร์และตามหาพ่อของเขา' },
-    { id: 'b005', title: 'Hunter × Hunter เล่ม 2', author: 'โยชิฮิโระ โทงาชิ', category: 'มังงะแอ็กชัน', price: 210, stock: 112, status: 'available', cover: 'assets/cover/b005.jpg', createdAt: '2026-01-17T09:00:00.000Z', rating: 4.5, sold: 177, desc: 'การทดสอบฮันเตอร์ดำเนินต่อไป พร้อมมิตรภาพและอุปสรรคที่ผู้เข้าสอบต้องเผชิญ' },
-    { id: 'b006', title: 'Hunter × Hunter เล่ม 3', author: 'โยชิฮิโระ โทงาชิ', category: 'มังงะแอ็กชัน', price: 430, stock: 72, status: 'available', cover: 'assets/cover/b006.jpg', createdAt: '2026-01-21T09:00:00.000Z', rating: 4.9, sold: 418, desc: 'การเดินทางของกอร์น คิรัว คุราปิก้า และเลโอริโอ เข้าสู่บททดสอบที่ยากลำบากยิ่งขึ้น' },
-    { id: 'b007', title: 'Hunter × Hunter เล่ม 4', author: 'โยชิฮิโระ โทงาชิ', category: 'มังงะแอ็กชัน', price: 299, stock: 58, status: 'available', cover: 'assets/cover/b007.jpg', createdAt: '2026-01-25T09:00:00.000Z', rating: 4.4, sold: 118, desc: 'การผจญภัยดำเนินต่อพร้อมการเผชิญหน้ากับศัตรูและความท้าทายใหม่ในการเป็นฮันเตอร์' },
-    { id: 'b008', title: 'ไม่ยากถ้าอยากมีมารยาทดี', author: 'ปัก ฮย็อนจ็อง', category: 'การ์ตูนความรู้', price: 179, stock: 128, status: 'available', cover: 'assets/cover/b008.jpg', createdAt: '2026-01-29T09:00:00.000Z', rating: 4.6, sold: 205, desc: 'หนังสือการ์ตูนความรู้ที่สอนเรื่องมารยาทในชีวิตประจำวัน ผ่านเรื่องราวสนุก เข้าใจง่าย เหมาะสำหรับผู้อ่านทุกวัย' },
-    { id: 'b009', title: 'ศรีธนญชัย', author: 'สุพรรณิการ์', category: 'วรรณกรรมไทย', price: 259, stock: 95, status: 'available', cover: 'assets/cover/b009.jpg', createdAt: '2026-02-02T09:00:00.000Z', rating: 4.7, sold: 183, desc: 'วรรณกรรมไทยคลาสสิกที่ถ่ายทอดเรื่องราวของศรีธนญชัย ผู้มีไหวพริบและปฏิภาณในการแก้ปัญหาด้วยอุบายและสติปัญญา' },
-    { id: 'b010', title: 'เทรดแบบกราฟเปล่า ทำกำไรด้วยแท่งเทียน', author: 'ลภัสรดา เพ็งสุข', category: 'การลงทุน', price: 399, stock: 68, status: 'available', cover: 'assets/cover/b010.jpg', createdAt: '2026-02-06T09:00:00.000Z', rating: 4.8, sold: 247, desc: 'แนะนำการวิเคราะห์กราฟแท่งเทียนเพื่อการลงทุน เหมาะสำหรับผู้เริ่มต้นและผู้ที่ต้องการพัฒนาทักษะการเทรดในตลาดหุ้น คริปโต และฟอเร็กซ์' },
-    { id: 'b011', title: 'จิตวิทยาสายดาร์ก', author: 'Dr.Hiro', category: 'จิตวิทยา', price: 295, stock: 84, status: 'available', cover: 'assets/cover/b011.jpg', createdAt: '2026-02-10T09:00:00.000Z', rating: 4.8, sold: 326, desc: 'หนังสือที่อธิบายหลักจิตวิทยาเกี่ยวกับการสื่อสาร การโน้มน้าวใจ และการทำความเข้าใจพฤติกรรมของผู้คน พร้อมยกตัวอย่างสถานการณ์ที่พบได้ในชีวิตประจำวัน' },
-    { id: 'b012', title: 'โลจิสติกส์-โซ่อุปทาน : การออกแบบและจัดการเบื้องต้น', author: 'รศ.ดร. ประจวบ กล่อมจิตร', category: 'โลจิสติกส์', price: 349, stock: 76, status: 'available', cover: 'assets/cover/b012.jpg', createdAt: '2026-02-14T09:00:00.000Z', rating: 4.7, sold: 142, desc: 'หนังสือแนะนำพื้นฐานด้านโลจิสติกส์และการจัดการโซ่อุปทาน ครอบคลุมการออกแบบระบบ การขนส่ง การจัดเก็บสินค้า และการบริหารกระบวนการเพื่อเพิ่มประสิทธิภาพขององค์กร' },
-    { id: 'b013', title: 'ผมคนนี้อยากหนีจากบทพระรอง', author: 'Sleepy-C', category: 'นิยายแปลเกาหลี', price: 430, stock: 54, status: 'available', cover: 'assets/cover/b013.jpg', createdAt: '2026-02-18T09:00:00.000Z', rating: 4.9, sold: 392, desc: 'นิยายแฟนตาซีโรแมนซ์ที่เล่าเรื่องของตัวละครผู้ตื่นขึ้นมาในโลกนิยายและพบว่าตัวเองได้รับบทเป็นพระรอง เขาจึงพยายามเปลี่ยนชะตากรรมและหลีกเลี่ยงเส้นทางเดิมของเรื่องราว' },
-    { id: 'b014', title: 'มั่งคั่งทั้งชีวิต (Money Mastery)', author: 'ภัทรพล ศิลปาจารย์', category: 'การเงินและการลงทุน', price: 395, stock: 87, status: 'available', cover: 'assets/cover/b014.jpg', createdAt: '2026-02-22T09:00:00.000Z', rating: 4.8, sold: 412, desc: 'หนังสือที่รวบรวมแนวคิดด้านการเงิน การลงทุน และการวางแผนชีวิต เพื่อสร้างความมั่งคั่งทั้งด้านเงิน เวลา และสุขภาพ เหมาะสำหรับผู้ที่ต้องการพัฒนาวินัยทางการเงินและสร้างความมั่นคงในระยะยาว' },
-    { id: 'b015', title: 'Money 101 เริ่มต้นนับหนึ่งสู่ชีวิตการเงินอุดมสุข', author: 'จักรพงษ์ เมษพันธุ์ (The Money Coach)', category: 'การเงินและการลงทุน', price: 325, stock: 102, status: 'available', cover: 'assets/cover/b015.jpg', createdAt: '2026-02-26T09:00:00.000Z', rating: 4.9, sold: 538, desc: 'คู่มือพื้นฐานด้านการเงินส่วนบุคคล ครอบคลุมการวางแผนรายรับรายจ่าย การออม การลงทุน และการบริหารหนี้ เหมาะสำหรับผู้ที่ต้องการเริ่มต้นสร้างความมั่นคงทางการเงิน' },
-  ];
-
-  function demoIsbn(index) {
-    const body = `978616000${String(index).padStart(3, '0')}`;
-    const sum = [...body].reduce((total, digit, position) => total + Number(digit) * (position % 2 ? 3 : 1), 0);
-    return `${body}${(10 - (sum % 10)) % 10}`;
+  function apiGetSync(path) {
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', `${API_BASE}${path}`, false);
+      xhr.send(null);
+      if (xhr.status >= 200 && xhr.status < 300) {
+        return JSON.parse(xhr.responseText);
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
   }
-  seedProducts.forEach((product, index) => { product.isbn = demoIsbn(index + 1); });
 
-  const seedUsers = [
-    { id: 'u001', name: 'ลูกค้าทดสอบ', email: 'customer@example.com', password: '123456', role: 'customer', phone: '080-111-2222' },
-    { id: 'u002', name: 'พนักงานร้าน', email: 'staff@example.com', password: '123456', role: 'staff', phone: '080-333-4444' },
-    { id: 'u003', name: 'ผู้ดูแลระบบ', email: 'admin@example.com', password: '123456', role: 'admin', phone: '080-555-6666' }
-  ];
-
-  const seedStaff = [
-    { id: 's001', name: 'พนักงานร้าน', email: 'staff@example.com', position: 'Order Staff', status: 'active' },
-    { id: 's002', name: 'เจ้าหน้าที่คลัง', email: 'stock@example.com', position: 'Stock Staff', status: 'active' }
-  ];
+  function apiRequestSync(method, path, body) {
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open(method, `${API_BASE}${path}`, false);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.send(body ? JSON.stringify(body) : null);
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const text = xhr.responseText;
+        return text ? JSON.parse(text) : null;
+      }
+      alert('API ERROR: ' + method + ' ' + path + ' status:' + xhr.status + ' response:' + xhr.responseText);
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
 
   const statusText = {
     payment: { pending: 'รอตรวจสลิป', approved: 'ชำระเงินแล้ว', rejected: 'สลิปไม่ผ่าน' },
@@ -97,14 +93,9 @@
   return `${base}_${user?.id || 'guest'}`;
 }
 function initData() {
-  if (!localStorage.getItem(STORAGE.products)) write(STORAGE.products, seedProducts);
-  else {
-    const savedProducts = read(STORAGE.products, seedProducts);
-    const migratedProducts = savedProducts.map((product, index) => product.isbn ? product : { ...product, isbn: demoIsbn(index + 1) });
-    if (migratedProducts.some((product, index) => product.isbn !== savedProducts[index].isbn)) write(STORAGE.products, migratedProducts);
-  }
-  if (!localStorage.getItem(STORAGE.users)) write(STORAGE.users, seedUsers);
-  if (!localStorage.getItem(STORAGE.staff)) write(STORAGE.staff, seedStaff);
+  if (!localStorage.getItem(STORAGE.products)) write(STORAGE.products, []);
+  if (!localStorage.getItem(STORAGE.users)) write(STORAGE.users, []);
+  if (!localStorage.getItem(STORAGE.staff)) write(STORAGE.staff, []);
   if (!localStorage.getItem(STORAGE.orders)) write(STORAGE.orders, []);
   if (!localStorage.getItem(STORAGE.addresses)) write(STORAGE.addresses, [
     { id: 'a001', name: 'บ้าน', receiver: 'ลูกค้าทดสอบ', phone: '080-111-2222', detail: '99/9 ถนนหนังสือ แขวงอ่านเพลิน เขตเมือง กรุงเทพมหานคร 10110' }
@@ -112,12 +103,31 @@ function initData() {
 }
 
   function formatTHB(n) { return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', maximumFractionDigits: 0 }).format(Number(n) || 0); }
-  function products() { return read(STORAGE.products, seedProducts); }
+  function products() {
+    const cached = read(STORAGE.products, []);
+    const response = apiGetSync('/products');
+    const items = response?.ok ? response.items : cached;
+    if (items.length) {
+      write(STORAGE.products, items);
+    }
+    return items;
+  }
   function saveProducts(items) { write(STORAGE.products, items); }
-  function users() { return read(STORAGE.users, seedUsers); }
+  function users() { return read(STORAGE.users, []); }
   function saveUsers(items) { write(STORAGE.users, items); }
-  function staff() { return read(STORAGE.staff, seedStaff); }
-  function saveStaff(items) { write(STORAGE.staff, items); }
+  function staff() {
+    const cached = read(STORAGE.staff, []);
+    const response = apiGetSync('/admin/staff');
+    const items = response?.ok ? response.items : cached;
+    if (response?.ok) write(STORAGE.staff, items);
+    return items;
+  }
+  function saveStaff(items) {
+    const previous = staff();
+    previous.filter(person => !items.some(item => String(item.id) === String(person.id))).forEach(person => apiRequestSync('DELETE', `/admin/staff/${person.id}`));
+    items.filter(person => !previous.some(item => String(item.id) === String(person.id))).forEach(person => apiRequestSync('POST', '/admin/staff', person));
+    write(STORAGE.staff, items);
+  }
   function currentUser() { return read(STORAGE.current, null); }
 function setCurrentUser(user) {
   if (!user) {
@@ -128,15 +138,57 @@ function setCurrentUser(user) {
   write(STORAGE.current, user);
   renderNav();
 }
-  function cart() { return read(scopedKey(STORAGE.cart), []); }
+  function cart() {
+    const user = currentUser();
+    const cached = read(scopedKey(STORAGE.cart), []);
+    if (!user) return cached;
+    const response = apiGetSync(`/cart/${user.id}`);
+    const items = response?.ok ? response.items.map(item => ({ id: item.productId, productId: item.productId, qty: item.quantity, cartItemId: item.id })) : cached;
+    if (response?.ok) write(scopedKey(STORAGE.cart), items);
+    return items;
+  }
 function saveCart(items) { write(scopedKey(STORAGE.cart), items); renderNav(); }
-function favorites() { return read(scopedKey(STORAGE.fav), []); }
-function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(); }  function orders() { return read(STORAGE.orders, []); }
+function favorites() {
+    const user = currentUser();
+    const cached = read(scopedKey(STORAGE.fav), []);
+    if (!user) return cached;
+    const response = apiGetSync(`/favorites/${user.id}`);
+    const items = response?.ok ? response.items.map(item => item.productId) : cached;
+    if (response?.ok) write(scopedKey(STORAGE.fav), items);
+    return items;
+}
+function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(); }  function orders() {
+    const user = currentUser();
+    const cached = read(STORAGE.orders, []);
+    if (!user) return cached;
+    const response = apiGetSync(user.role === 'admin' || user.role === 'staff' ? '/orders/all' : `/orders/${user.id}`);
+    const items = response?.ok ? response.items : cached;
+    if (response?.ok) write(STORAGE.orders, items);
+    return items;
+  }
   function saveOrders(items) { write(STORAGE.orders, items); }
-  function addresses() { return read(STORAGE.addresses, []); }
-  function saveAddresses(items) { write(STORAGE.addresses, items); }
-  function findProduct(id) { return products().find(p => p.id === id); }
-  function cartDetailed() { return cart().map(item => ({ ...item, product: findProduct(item.id) })).filter(item => item.product); }
+  function addresses() {
+    const user = currentUser();
+    const cached = read(scopedKey(STORAGE.addresses), []);
+    if (!user) return cached;
+    const response = apiGetSync(`/addresses/${user.id}`);
+    const items = response?.ok ? response.items : cached;
+    if (response?.ok) write(scopedKey(STORAGE.addresses), items);
+    return items;
+  }
+  function saveAddresses(items) { write(scopedKey(STORAGE.addresses), items); }
+  function createAddress(address) {
+    const user = currentUser();
+    const response = user ? apiRequestSync('POST', `/addresses/${user.id}`, address) : null;
+    return response?.ok ? response.item : null;
+  }
+  function deleteAddress(id) {
+    const user = currentUser();
+    const response = user ? apiRequestSync('DELETE', `/addresses/${user.id}/${id}`) : null;
+    return Boolean(response?.ok);
+  }
+  function findProduct(id) { return products().find(p => String(p.id) === String(id)); }
+  function cartDetailed() { return cart().map(item => ({ ...item, product: findProduct(item.productId || item.id) })).filter(item => item.product); }
   function cartTotal() { return cartDetailed().reduce((sum, item) => sum + item.product.price * item.qty, 0); }
   function productStockStatus(stock) { return stock <= 0 ? 'sold' : 'available'; }
   function availableStock(product) { return Math.max(0, (product?.stock || 0) - (product?.reserved || 0)); }
@@ -162,12 +214,21 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     if (!product) { toast('ไม่พบสินค้านี้'); return false; }
     const avail = availableStock(product);
     if (avail <= 0) { toast('สินค้าหมดแล้ว'); return false; }
-    const items = cart();
-    const found = items.find(i => i.id === id);
+
+    const user = currentUser();
+    const currentItems = cart();
+    const nextItems = [...currentItems];
+    const found = nextItems.find(i => (i.productId || i.id) === id);
     const nextQty = (found?.qty || 0) + qty;
     if (nextQty > avail) { toast('จำนวนที่เลือกมากกว่าสต็อก'); return false; }
-    if (found) found.qty = nextQty; else items.push({ id, qty });
-    saveCart(items);
+
+    if (user) {
+      const response = apiRequestSync('POST', `/cart/${user.id}/add`, { productId: Number(id), quantity: qty });
+      if (!response?.ok) { toast('ไม่สามารถเพิ่มลงตะกร้าได้'); return false; }
+    }
+
+    if (found) found.qty = nextQty; else nextItems.push({ id, productId: id, qty });
+    saveCart(nextItems);
     toast('เพิ่มลงตะกร้าแล้ว');
     return true;
   }
@@ -175,15 +236,34 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     const product = findProduct(id);
     const avail = product ? availableStock(product) : 1;
     const next = Math.max(1, Math.min(Number(qty) || 1, avail || 1));
-    saveCart(cart().map(i => i.id === id ? { ...i, qty: next } : i));
+    const user = currentUser();
+    if (user) {
+      const response = apiRequestSync('PUT', `/cart/${user.id}/update`, { productId: Number(id), quantity: next });
+      if (!response?.ok) { toast('ไม่สามารถอัปเดตตะกร้าได้'); return; }
+    }
+    saveCart(cart().map(i => String(i.productId || i.id) === String(id) ? { ...i, productId: id, qty: next } : i));
   }
-  function removeCartItem(id) { saveCart(cart().filter(i => i.id !== id)); }
+
+  function removeCartItem(id) {
+    const user = currentUser();
+    if (user) {
+      const response = apiRequestSync('DELETE', `/cart/${user.id}/remove/${id}`);
+      if (!response?.ok) { toast('ไม่สามารถลบสินค้าได้'); return; }
+    }
+    saveCart(cart().filter(i => (i.productId || i.id) !== id));
+  }
   function toggleFavorite(id) {
+    const user = currentUser();
     let fav = favorites();
-    if (fav.includes(id)) { fav = fav.filter(x => x !== id); toast('นำออกจากรายการโปรดแล้ว'); }
-    else { fav.push(id); toast('บันทึกรายการโปรดแล้ว'); }
-    saveFavorites(fav);
-    return fav.includes(id);
+    const response = user ? apiRequestSync('POST', `/favorites/${user.id}/toggle`, { productId: Number(id) }) : null;
+    if (!user || response?.ok) {
+      if (fav.includes(id)) { fav = fav.filter(x => x !== id); toast('นำออกจากรายการโปรดแล้ว'); }
+      else { fav.push(id); toast('บันทึกรายการโปรดแล้ว'); }
+      saveFavorites(fav);
+      return fav.includes(id);
+    }
+    toast('ไม่สามารถบันทึกรายการโปรดได้');
+    return false;
   }
 
   //--------------------------------------------------------------------------------------------//
@@ -197,6 +277,14 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     return 0;
   }
   function shippingOptions(bookCount = 0) {
+    const methodsResponse = apiGetSync('/shipping/methods');
+    const ratesResponse = apiGetSync('/shipping/rates');
+    if (methodsResponse?.ok && ratesResponse?.ok) {
+      return methodsResponse.items.map(method => {
+        const tier = ratesResponse.items.find(rate => Number(rate.shippingMethodId) === Number(method.id) && bookCount >= Number(rate.minQty) && (rate.maxQty === null || bookCount <= Number(rate.maxQty)));
+        return { id: String(method.id), name: method.name, price: Number(tier?.price || 0), desc: `${method.estimatedDays || '-'} วันทำการ` };
+      });
+    }
     const standardRates = [45, 70, 110, 160];
     const expressRates = [65, 100, 150, 220];
     const activeRateIndex = bookCount >= 50 ? 4 : bookCount >= 31 ? 3 : bookCount >= 11 ? 2 : bookCount >= 4 ? 1 : bookCount >= 1 ? 0 : -1;
@@ -230,9 +318,17 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
   }
   function makeOrder(draft, slipName, slipData, slipType, contactPhone) {
     const current = currentUser();
-    const id = generateOrderId();
+    const response = current ? apiRequestSync('POST', '/orders/create', {
+      userId: Number(current.id),
+      addressId: Number(draft.address?.id),
+      shippingMethodId: Number(draft.shippingMethod?.id),
+      items: draft.items.map(item => ({ bookId: Number(item.id), quantity: Number(item.qty) })),
+      slipName, slipData, slipType
+    }) : null;
+    if (!response?.ok) { toast('ไม่สามารถสร้างคำสั่งซื้อได้'); return null; }
+    const id = 'ORD' + new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 12);
     const order = {
-      id,
+      id: response.orderId || id,
       createdAt: new Date().toISOString(),
       customerId: current?.id || 'guest',
       customerName: current?.name || 'ลูกค้า',
@@ -259,8 +355,6 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
       ]
     };
     const all = orders(); all.unshift(order); saveOrders(all);
-    const qtyById = new Map(draft.items.map(i => [i.id, i.qty]));
-    saveProducts(products().map(p => qtyById.has(p.id) ? { ...p, reserved: (p.reserved || 0) + qtyById.get(p.id), status: 'reserved' } : p));
     saveCart([]);
     localStorage.removeItem(STORAGE.checkoutDraft);
     return order;
@@ -289,6 +383,8 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
   }
   function withTimeline(order, text) { return { ...order, timeline: [...(order.timeline || []), { time: new Date().toISOString(), text }] }; }
   function approveOrder(id, staffName) {
+    const remote = apiRequestSync('PATCH', `/orders/${id}/status`, { action: 'approve' });
+    if (remote?.ok) return { ok: true, message: 'อนุมัติสลิปแล้ว' };
     let result = { ok: false, message: 'ไม่พบคำสั่งซื้อ' };
     const nextOrders = orders().map(order => {
       if (order.id !== id) return order;
@@ -301,6 +397,8 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     return result;
   }
   function rejectOrder(id, staffName) {
+    const remote = apiRequestSync('PATCH', `/orders/${id}/status`, { action: 'reject' });
+    if (remote?.ok) return { ok: true, message: 'ยกเลิกคำสั่งซื้อแล้ว' };
     let result = { ok: false, message: 'ไม่พบคำสั่งซื้อ' };
     const productList = products();
     const nextOrders = orders().map(order => {
@@ -324,6 +422,8 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     return result;
   }
   function updateOrderStage(id, stage, staffName) {
+    const remote = apiRequestSync('PATCH', `/orders/${id}/status`, { action: stage === 'shipped' ? 'ship' : stage });
+    if (remote?.ok) return { ok: true, message: stage === 'shipped' ? 'ส่งสินค้าแล้ว' : 'อัปเดตสถานะแล้ว' };
     let result = { ok: false, message: 'ไม่พบคำสั่งซื้อ' };
     const productList = products();
     let touchedProducts = false;
@@ -360,6 +460,8 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     return result;
   }
   function customerReceive(id) {
+    const remote = apiRequestSync('PATCH', `/orders/${id}/status`, { action: 'receive' });
+    if (remote?.ok) return { ok: true, message: 'ยืนยันการได้รับสินค้าแล้ว' };
     let result = { ok: false, message: 'ไม่พบคำสั่งซื้อ' };
     const nextOrders = orders().map(order => {
       if (order.id !== id) return order;
@@ -377,7 +479,7 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     return 0;
   }
 
-  function bookCard(product) {
+ function bookCard(product) {
     const fav = favorites().includes(product.id);
     const avail = availableStock(product);
     const outOfStock = avail <= 0;
@@ -391,17 +493,17 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     return `
       <article class="book-card ${outOfStock ? 'is-out-of-stock' : ''}" data-id="${product.id}" data-category="${escapeHtml(product.category)}">
         <button class="icon-btn fav-btn ${fav ? 'active' : ''}" data-fav="${product.id}" title="บันทึกรายการโปรด" aria-label="บันทึกรายการโปรด">${icon(fav ? 'heartFill' : 'heart')}</button>
-        <a href="book-detail.html?id=${product.id}" class="book-cover">
+        <a href="book-detail.html#id=${product.id}" class="book-cover">
           <img src="${product.cover}" alt="${escapeHtml(product.title)}" class="cover-img" onerror="this.onerror=null;this.src='assets/cover/default.jpg'">
           ${coverStockBadge}
         </a>
         <div class="book-info">
           <div class="pill-row"><span class="badge orange">${escapeHtml(product.category)}</span>${stockBadge}</div>
-          <h3><a href="book-detail.html?id=${product.id}">${escapeHtml(product.title)}</a></h3>
+          <h3><a href="book-detail.html#id=${product.id}">${escapeHtml(product.title)}</a></h3>
           <p>${escapeHtml(product.author)}</p>
           <div class="price-row"><span class="price">${formatTHB(product.price)}</span><span class="helper">ขายแล้ว ${product.sold}</span></div>
           <div class="book-actions">
-            <a class="btn btn-secondary btn-small" href="book-detail.html?id=${product.id}">รายละเอียด</a>
+            <a class="btn btn-secondary btn-small" href="book-detail.html#id=${product.id}">รายละเอียด</a>
             ${cartButton}
           </div>
         </div>
@@ -531,7 +633,7 @@ function bindGlobalActions(root = document) {
   window.BookApp = {
     STORAGE, icon, formatTHB, products, saveProducts, users, saveUsers, currentUser, setCurrentUser,
     cart, saveCart, cartDetailed, cartTotal, addToCart, changeCartQty, removeCartItem,
-    favorites, saveFavorites, toggleFavorite, orders, saveOrders, addresses, saveAddresses,
+    favorites, saveFavorites, toggleFavorite, orders, saveOrders, addresses, saveAddresses, createAddress, deleteAddress,
     staff, saveStaff, shippingOptions, makeOrder, approveOrder, rejectOrder, updateOrderStage,
     customerReceive, getOrderStatusIndex, stepHtml, statusLabel, statusBadge, timelineList,
     bookCard, toast, requireLogin, requireRole, renderNav, renderFooter, bindGlobalActions, findProduct,
