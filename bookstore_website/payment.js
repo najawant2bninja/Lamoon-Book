@@ -32,6 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   input.addEventListener('change', () => {
     const file = input.files[0];
+    if (file && file.size > 2 * 1024 * 1024) {
+      BookApp.toast('ไฟล์ใหญ่เกินไป กรุณาเลือกไฟล์ไม่เกิน 2MB');
+      input.value = '';
+      document.getElementById('fileName').textContent = 'ยังไม่ได้เลือกไฟล์';
+      renderPreview(null);
+      return;
+    }
     document.getElementById('fileName').textContent = file?.name || 'ยังไม่ได้เลือกไฟล์';
     renderPreview(file);
   });
@@ -41,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!file) { BookApp.toast('กรุณาแนบสลิปก่อน'); return; }
     if (!slipData) { BookApp.toast('ระบบกำลังอ่านไฟล์สลิป กรุณากดอีกครั้ง'); return; }
     const order = BookApp.makeOrder(draft, file.name, slipData, slipType);
+    if (!order) return;
     BookApp.toast('ส่งสลิปแล้ว รอพนักงานตรวจสอบ');
     setTimeout(() => location.href = 'tracking.html?order=' + order.id, 700);
   });
