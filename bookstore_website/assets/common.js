@@ -110,7 +110,7 @@ function initData() {
     if (response?.ok) {
       items = items.map(item => {
         const local = cached.find(c => String(c.id) === String(item.id));
-        return local ? { ...item, ...local } : item;
+        return local ? { ...local, ...item } : item;
       });
     }
     if (items.length) {

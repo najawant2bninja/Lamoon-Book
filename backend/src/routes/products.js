@@ -34,9 +34,24 @@ router.get('/', async (req, res) => {
       SELECT b.book_id AS id, b.title, b.author_name AS author, c.category_name AS category,
              b.price, b.stock_quantity AS stock, b.description AS description,
              b.cover_image_url AS cover, b.created_at AS createdAt,
-             b.isbn, COALESCE(b.stock_quantity, 0) AS sold
+             b.isbn, COALESCE(s.sold_qty, 0) AS sold,
+             COALESCE(r.reserved_qty, 0) AS reserved
       FROM books b
       LEFT JOIN categories c ON c.category_id = b.category_id
+      LEFT JOIN (
+        SELECT oi.book_id, SUM(oi.quantity) AS reserved_qty
+        FROM order_items oi
+        JOIN orders o ON o.order_id = oi.order_id
+        WHERE o.order_status IN ('pending', 'paid')
+        GROUP BY oi.book_id
+      ) r ON r.book_id = b.book_id
+      LEFT JOIN (
+        SELECT oi.book_id, SUM(oi.quantity) AS sold_qty
+        FROM order_items oi
+        JOIN orders o ON o.order_id = oi.order_id
+        WHERE o.order_status IN ('shipping', 'completed')
+        GROUP BY oi.book_id
+      ) s ON s.book_id = b.book_id
       ORDER BY b.created_at DESC
     `);
 
@@ -52,9 +67,24 @@ router.get('/:id', async (req, res) => {
       SELECT b.book_id AS id, b.title, b.author_name AS author, c.category_name AS category,
              b.price, b.stock_quantity AS stock, b.description AS description,
              b.cover_image_url AS cover, b.created_at AS createdAt,
-             b.isbn
+             b.isbn, COALESCE(r.reserved_qty, 0) AS reserved,
+             COALESCE(s.sold_qty, 0) AS sold
       FROM books b
       LEFT JOIN categories c ON c.category_id = b.category_id
+      LEFT JOIN (
+        SELECT oi.book_id, SUM(oi.quantity) AS reserved_qty
+        FROM order_items oi
+        JOIN orders o ON o.order_id = oi.order_id
+        WHERE o.order_status IN ('pending', 'paid')
+        GROUP BY oi.book_id
+      ) r ON r.book_id = b.book_id
+      LEFT JOIN (
+        SELECT oi.book_id, SUM(oi.quantity) AS sold_qty
+        FROM order_items oi
+        JOIN orders o ON o.order_id = oi.order_id
+        WHERE o.order_status IN ('shipping', 'completed')
+        GROUP BY oi.book_id
+      ) s ON s.book_id = b.book_id
       WHERE b.book_id = ?
     `, [req.params.id]);
 
