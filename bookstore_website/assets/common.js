@@ -552,11 +552,11 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     const page = document.body.dataset.page || '';
     const cartCount = cart().reduce((s, i) => s + i.qty, 0);
     const favCount = favorites().length;
-    const isStaffOnly = user?.role === 'staff';
+    const isBackOffice = user?.role === 'staff' || user?.role === 'admin';
     const adminLinks = user?.role === 'admin' ? `<a class="${page === 'admin' ? 'active' : ''}" href="admin.html">ผู้ดูแล</a>` : '';
     const staffLinks = user?.role === 'staff' || user?.role === 'admin' ? `<a class="${page === 'staff' ? 'active' : ''}" href="staff.html">พนักงาน</a>` : '';
 
-    const customerLinks = isStaffOnly ? '' : `
+    const customerLinks = isBackOffice ? '' : `
     <a class="${page === 'home' ? 'active' : ''}" href="index.html">หน้าหลัก</a>
     <a class="${page === 'products' ? 'active' : ''}" href="products.html">หนังสือ</a>
     <a class="${page === 'favorites' ? 'active' : ''}" href="favorites.html">รายการโปรด <span class="nav-count">${favCount}</span></a>
