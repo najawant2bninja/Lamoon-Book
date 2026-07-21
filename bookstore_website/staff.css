@@ -14,6 +14,22 @@
   font-size:13px;
   line-height:1.6;
 }
+.staff-order-details{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+  margin-top:14px;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fffaf0;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.65;
+}
+.staff-order-details strong{color:var(--ink)}
+.staff-order-details p{margin:5px 0 0}
+.staff-order-details ul{margin:5px 0 0;padding-left:20px}
 .staff-actions{
   display:flex;
   gap:8px;
@@ -109,4 +125,5 @@
   .staff-actions .btn{
     flex:1 1 140px;
   }
+  .staff-order-details{grid-template-columns:1fr}
 }

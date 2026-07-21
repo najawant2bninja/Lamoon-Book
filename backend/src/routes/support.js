@@ -1,5 +1,6 @@
 const express = require('express');
 const pool = require('../config/db');
+const { authenticate, allowRoles } = require('../middleware/auth');
 const router = express.Router();
 
 router.post('/', async (req, res) => {
@@ -14,7 +15,7 @@ router.post('/', async (req, res) => {
   } catch (error) { res.status(500).json({ ok: false, message: 'Failed to submit support request', error: error.message }); }
 });
 
-router.get('/', async (req, res) => {
+router.get('/', authenticate, allowRoles('staff', 'admin'), async (req, res) => {
   try {
     const [items] = await pool.query('SELECT ticket_id AS id, user_id AS userId, email, topic, message, status, created_at AS createdAt FROM support_tickets ORDER BY created_at DESC');
     res.json({ ok: true, items });

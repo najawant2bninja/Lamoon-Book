@@ -15,12 +15,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const phoneInput = form.querySelector('input[name="phone"]');
   phoneInput?.addEventListener('input', () => { phoneInput.value = phoneInput.value.replace(/\D/g, '').slice(0, 10); });
 
-  form.onsubmit = e => {
+  form.onsubmit = async e => {
     e.preventDefault();
     const fd = new FormData(form);
     const phone = String(fd.get('phone') || '').replace(/\D/g, '');
     if (!/^\d{10}$/.test(phone)) { BookApp.toast('กรุณากรอกเบอร์โทร 10 หลักเป็นตัวเลขเท่านั้น'); return; }
-    const updated = { ...BookApp.currentUser(), name: String(fd.get('name') || '').trim(), phone };
+    const name = String(fd.get('name') || '').trim();
+    if (!name) { BookApp.toast('กรุณากรอกชื่อผู้ใช้'); return; }
+    const result = await BookApp.apiRequest('PUT', `/users/${encodeURIComponent(user.id)}`, { name, phone });
+    if (!result?.ok) { BookApp.toast(result?.message || 'ไม่สามารถบันทึกโปรไฟล์ได้'); return; }
+    const updated = { ...BookApp.currentUser(), name, phone };
     BookApp.saveUsers(BookApp.users().map(u => u.id === updated.id ? updated : u));
     BookApp.setCurrentUser(updated);
     BookApp.toast('บันทึกโปรไฟล์แล้ว');
@@ -66,11 +70,11 @@ function openPasswordModal() {
         </div>
         <div class="form-group">
           <label>รหัสผ่านใหม่</label>
-          <input class="input" type="password" name="newPassword" autocomplete="new-password" required minlength="6">
+          <input class="input" type="password" name="newPassword" autocomplete="new-password" required minlength="8">
         </div>
         <div class="form-group">
           <label>ยืนยันรหัสผ่านใหม่</label>
-          <input class="input" type="password" name="confirmPassword" autocomplete="new-password" required minlength="6">
+          <input class="input" type="password" name="confirmPassword" autocomplete="new-password" required minlength="8">
         </div>
         <div class="pill-row" style="justify-content:flex-end;margin-top:8px">
           <button type="button" class="btn btn-secondary" id="cancelPwdBtn">ยกเลิก</button>
@@ -94,8 +98,8 @@ function openPasswordModal() {
     const confirmPassword = String(fd.get('confirmPassword') || '');
     const user = BookApp.currentUser();
 
-    if (newPassword.length < 6) {
-      BookApp.toast('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');
+    if (newPassword.length < 8) {
+      BookApp.toast('รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -108,25 +112,11 @@ function openPasswordModal() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3000/api/users/${encodeURIComponent(user.id)}/password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentPassword, newPassword })
+      const data = await BookApp.apiRequest('POST', `/users/${encodeURIComponent(user.id)}/password`, {
+        currentPassword,
+        newPassword
       });
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok || !data?.ok) {
-        throw new Error(data?.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้');
-      }
-
-      const updated = { ...user, password: newPassword };
-      const existingUsers = BookApp.users();
-      const nextUsers = existingUsers.some(u => String(u.id) === String(user.id))
-        ? existingUsers.map(u => String(u.id) === String(user.id) ? updated : u)
-        : [...existingUsers, updated];
-
-      BookApp.saveUsers(nextUsers);
-      BookApp.setCurrentUser(updated);
+      if (!data?.ok) throw new Error(data?.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้');
       BookApp.toast('เปลี่ยนรหัสผ่านสำเร็จ');
       closeModal();
     } catch (error) {

@@ -9,10 +9,14 @@
     staff: 'bookStore_staff_v2',
     addresses: 'bookStore_addresses_v2',
     checkoutDraft: 'bookStore_checkoutDraft_v2',
-    selectedShipping: 'bookStore_selectedShipping_v2'
+    selectedShipping: 'bookStore_selectedShipping_v2',
+    token: 'bookStore_authToken_v2'
   };
 
-  const API_BASE = 'http://localhost:3000/api';
+  // Use the same host/IP that served the frontend. Devices on the LAN must
+  // call this computer's API instead of resolving `localhost` to themselves.
+  const API_HOST = window.location.hostname || 'localhost';
+  const API_BASE = window.BOOKSTORE_API_BASE || `http://${API_HOST}:3000/api`;
 
   const icons = {
     book: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg>',
@@ -45,17 +49,37 @@
   };
   function icon(name) { return icons[name] || icons.book; }
 
+  function authToken() { return sessionStorage.getItem(STORAGE.token) || ''; }
+  function authHeaders(headers = {}) {
+    const token = authToken();
+    return token ? { ...headers, Authorization: `Bearer ${token}` } : { ...headers };
+  }
+
+  function parseApiPayload(text) {
+    if (!text) return null;
+    try { return JSON.parse(text); } catch (error) { return null; }
+  }
+
+  function apiFailure(status, payload, fallback) {
+    return {
+      ok: false,
+      status,
+      message: payload?.message || payload?.error || fallback
+    };
+  }
+
   function apiGetSync(path) {
     try {
       const xhr = new XMLHttpRequest();
       xhr.open('GET', `${API_BASE}${path}`, false);
+      Object.entries(authHeaders()).forEach(([name, value]) => xhr.setRequestHeader(name, value));
       xhr.send(null);
       if (xhr.status >= 200 && xhr.status < 300) {
-        return JSON.parse(xhr.responseText);
+        return parseApiPayload(xhr.responseText) || { ok: true };
       }
-      return null;
+      return apiFailure(xhr.status, parseApiPayload(xhr.responseText), `เรียกข้อมูลไม่สำเร็จ (${xhr.status})`);
     } catch (error) {
-      return null;
+      return apiFailure(0, null, 'ไม่สามารถเชื่อมต่อ Backend ได้');
     }
   }
 
@@ -63,16 +87,33 @@
     try {
       const xhr = new XMLHttpRequest();
       xhr.open(method, `${API_BASE}${path}`, false);
-      xhr.setRequestHeader('Content-Type', 'application/json');
+      Object.entries(authHeaders({ 'Content-Type': 'application/json' })).forEach(([name, value]) => xhr.setRequestHeader(name, value));
       xhr.send(body ? JSON.stringify(body) : null);
       if (xhr.status >= 200 && xhr.status < 300) {
-        const text = xhr.responseText;
-        return text ? JSON.parse(text) : null;
+        return parseApiPayload(xhr.responseText) || { ok: true };
       }
-      alert('API ERROR: ' + method + ' ' + path + ' status:' + xhr.status + ' response:' + xhr.responseText);
-      return null;
+      return apiFailure(xhr.status, parseApiPayload(xhr.responseText), `บันทึกข้อมูลไม่สำเร็จ (${xhr.status})`);
     } catch (error) {
-      return null;
+      return apiFailure(0, null, 'ไม่สามารถเชื่อมต่อ Backend ได้');
+    }
+  }
+
+  async function apiRequest(method, path, body = null) {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+    const headers = authHeaders(isFormData || body === null ? {} : { 'Content-Type': 'application/json' });
+    try {
+      const response = await fetch(`${API_BASE}${path}`, {
+        method,
+        headers,
+        body: body === null ? undefined : isFormData ? body : JSON.stringify(body)
+      });
+      const payload = parseApiPayload(await response.text());
+      if (!response.ok || payload?.ok === false) {
+        return apiFailure(response.status, payload, `บันทึกข้อมูลไม่สำเร็จ (${response.status})`);
+      }
+      return { ...(payload || { ok: true }), status: response.status };
+    } catch (error) {
+      return apiFailure(0, null, 'ไม่สามารถเชื่อมต่อ Backend ได้');
     }
   }
 
@@ -88,15 +129,30 @@
 
   function read(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch (e) { return fallback; } }
   function write(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
+  function readSession(key, fallback) { try { return JSON.parse(sessionStorage.getItem(key)) ?? fallback; } catch (e) { return fallback; } }
+  function writeSession(key, value) { sessionStorage.setItem(key, JSON.stringify(value)); }
+  function sanitizeUser(user) {
+    if (!user || typeof user !== 'object') return user;
+    const { password, passwordHash, password_hash, ...safeUser } = user;
+    return safeUser;
+  }
+  function sanitizeUsers(items) { return Array.isArray(items) ? items.map(sanitizeUser) : []; }
+  function purgeLegacySensitiveStorage() {
+    localStorage.removeItem(STORAGE.current);
+    localStorage.removeItem(STORAGE.orders);
+    localStorage.removeItem(STORAGE.staff);
+    if (localStorage.getItem(STORAGE.users)) write(STORAGE.users, sanitizeUsers(read(STORAGE.users, [])));
+    const sessionUser = readSession(STORAGE.current, null);
+    if (sessionUser) writeSession(STORAGE.current, sanitizeUser(sessionUser));
+  }
+  purgeLegacySensitiveStorage();
   function scopedKey(base) {
-  const user = read(STORAGE.current, null);
-  return `${base}_${user?.id || 'guest'}`;
+  const user = currentUser();
+  return `${base}_${user?.role || 'guest'}_${user?.id || 'guest'}`;
 }
 function initData() {
   if (!localStorage.getItem(STORAGE.products)) write(STORAGE.products, []);
   if (!localStorage.getItem(STORAGE.users)) write(STORAGE.users, []);
-  if (!localStorage.getItem(STORAGE.staff)) write(STORAGE.staff, []);
-  if (!localStorage.getItem(STORAGE.orders)) write(STORAGE.orders, []);
   if (!localStorage.getItem(STORAGE.addresses)) write(STORAGE.addresses, [
     { id: 'a001', name: 'บ้าน', receiver: 'ลูกค้าทดสอบ', phone: '080-111-2222', detail: '99/9 ถนนหนังสือ แขวงอ่านเพลิน เขตเมือง กรุงเทพมหานคร 10110' }
   ]);
@@ -119,29 +175,72 @@ function initData() {
     return items;
   }
   function saveProducts(items) { write(STORAGE.products, items); }
-  function users() { return read(STORAGE.users, []); }
-  function saveUsers(items) { write(STORAGE.users, items); }
+  function users() {
+    const safeUsers = sanitizeUsers(read(STORAGE.users, []));
+    write(STORAGE.users, safeUsers);
+    return safeUsers;
+  }
+  function saveUsers(items) { write(STORAGE.users, sanitizeUsers(items)); }
   function staff() {
-    const cached = read(STORAGE.staff, []);
+    const cacheKey = scopedKey(STORAGE.staff);
+    const cached = read(cacheKey, []);
     const response = apiGetSync('/admin/staff');
     const items = response?.ok ? response.items : cached;
-    if (response?.ok) write(STORAGE.staff, items);
+    if (response?.ok) write(cacheKey, items);
     return items;
   }
-  function saveStaff(items) {
-    const previous = staff();
-    previous.filter(person => !items.some(item => String(item.id) === String(person.id))).forEach(person => apiRequestSync('DELETE', `/admin/staff/${person.id}`));
-    items.filter(person => !previous.some(item => String(item.id) === String(person.id))).forEach(person => apiRequestSync('POST', '/admin/staff', person));
-    write(STORAGE.staff, items);
+  async function createStaff(input) {
+    const payload = {
+      name: String(input?.name || '').trim(),
+      email: String(input?.email || '').trim(),
+      password: String(input?.password || '')
+    };
+    if (input?.phone) payload.phone = String(input.phone).trim();
+    const response = await apiRequest('POST', '/admin/staff', payload);
+    if (!response?.ok) return response;
+    const item = sanitizeUser(response.item || {
+      id: String(response.id),
+      name: payload.name,
+      email: payload.email,
+      position: 'พนักงาน',
+      status: 'active'
+    });
+    const cacheKey = scopedKey(STORAGE.staff);
+    const cached = read(cacheKey, []).filter(person => String(person.id) !== String(item.id));
+    write(cacheKey, [item, ...cached]);
+    return { ...response, ok: true, item, message: response.message || 'เพิ่มพนักงานแล้ว' };
   }
-  function currentUser() { return read(STORAGE.current, null); }
-function setCurrentUser(user) {
+  async function deleteStaff(id) {
+    const response = await apiRequest('DELETE', `/admin/staff/${encodeURIComponent(id)}`);
+    if (!response?.ok) return response;
+    const cacheKey = scopedKey(STORAGE.staff);
+    write(cacheKey, read(cacheKey, []).map(person => String(person.id) === String(id) ? { ...person, status: 'inactive' } : person));
+    return { ...response, ok: true, message: response.message || 'ลบหรือปิดใช้งานพนักงานแล้ว' };
+  }
+  async function setStaffStatus(id, status) {
+    const normalizedStatus = status === 'active' ? 'active' : 'inactive';
+    const response = await apiRequest('PATCH', `/admin/staff/${encodeURIComponent(id)}/status`, { status: normalizedStatus });
+    if (!response?.ok) return response;
+    const cacheKey = scopedKey(STORAGE.staff);
+    write(cacheKey, read(cacheKey, []).map(person => String(person.id) === String(id) ? { ...person, status: normalizedStatus } : person));
+    return {
+      ...response,
+      ok: true,
+      message: response.message || (normalizedStatus === 'active' ? 'เปิดใช้งานพนักงานแล้ว' : 'ปิดใช้งานพนักงานแล้ว')
+    };
+  }
+  function currentUser() { return sanitizeUser(readSession(STORAGE.current, null)); }
+function setCurrentUser(user, token) {
   if (!user) {
+    sessionStorage.removeItem(STORAGE.current);
+    sessionStorage.removeItem(STORAGE.token);
     localStorage.removeItem(STORAGE.current);
     renderNav();
     return;
   }
-  write(STORAGE.current, user);
+  writeSession(STORAGE.current, sanitizeUser(user));
+  localStorage.removeItem(STORAGE.current);
+  if (typeof token === 'string' && token) sessionStorage.setItem(STORAGE.token, token);
   renderNav();
 }
   function cart() {
@@ -165,14 +264,15 @@ function favorites() {
 }
 function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(); }  function orders() {
     const user = currentUser();
-    const cached = read(STORAGE.orders, []);
+    const cacheKey = scopedKey(STORAGE.orders);
+    const cached = read(cacheKey, []);
     if (!user) return cached;
     const response = apiGetSync(user.role === 'admin' || user.role === 'staff' ? '/orders/all' : `/orders/${user.id}`);
     const items = response?.ok ? response.items : cached;
-    if (response?.ok) write(STORAGE.orders, items);
+    if (response?.ok) write(cacheKey, items);
     return items;
   }
-  function saveOrders(items) { write(STORAGE.orders, items); }
+  function saveOrders(items) { write(scopedKey(STORAGE.orders), items); }
   function addresses() {
     const user = currentUser();
     const cached = read(scopedKey(STORAGE.addresses), []);
@@ -331,7 +431,7 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
       items: draft.items.map(item => ({ bookId: Number(item.id), quantity: Number(item.qty) })),
       slipName, slipData, slipType
     }) : null;
-    if (!response?.ok) { toast('ไม่สามารถสร้างคำสั่งซื้อได้'); return null; }
+    if (!response?.ok) { toast(response?.message || 'ไม่สามารถสร้างคำสั่งซื้อได้'); return null; }
     const id = 'ORD' + new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 12);
     const order = {
       id: response.orderId || id,
@@ -360,127 +460,49 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
         { time: new Date().toISOString(), text: 'ระบบจองสินค้าเพื่อรอตรวจสอบ' }
       ]
     };
-    const all = orders(); all.unshift(order); saveOrders(all);
+    const all = orders().filter(existing => String(existing.id) !== String(order.id));
+    all.unshift(order);
+    saveOrders(all);
     saveCart([]);
     localStorage.removeItem(STORAGE.checkoutDraft);
     return order;
   }
   function resubmitSlip(id, slipName, slipData, slipType) {
-    let result = { ok: false, message: 'ไม่พบคำสั่งซื้อ' };
-    const productList = products();
-    const nextOrders = orders().map(order => {
-      if (order.id !== id) return order;
-      if (order.paymentStatus !== 'rejected') { result = { ok: false, message: 'คำสั่งซื้อนี้ไม่สามารถแนบหลักฐานใหม่ได้' }; return order; }
-      const attempts = order.resubmitCount || 0;
-      if (attempts >= 2) { result = { ok: false, message: 'ครบจำนวนครั้งที่แนบหลักฐานได้แล้ว คำสั่งซื้อนี้ถูกยกเลิกถาวร' }; return order; }
-      const insufficient = order.items.find(item => availableStock(productList.find(p => p.id === item.id)) < item.qty);
-      if (insufficient) { result = { ok: false, message: `สต็อกไม่พอสำหรับ: ${insufficient.title}` }; return order; }
-      order.items.forEach(item => {
-        const p = productList.find(x => x.id === item.id);
-        if (p) { p.reserved = (p.reserved || 0) + item.qty; p.status = 'reserved'; }
-      });
-      const nextAttempts = attempts + 1;
-      const isLastChance = nextAttempts >= 2;
-      result = { ok: true, message: isLastChance ? 'แนบหลักฐานครั้งสุดท้ายแล้ว รอตรวจสอบ หากไม่ผ่านคำสั่งซื้อจะถูกยกเลิกถาวร' : 'แนบหลักฐานใหม่แล้ว รอตรวจสอบ' };
-      return withTimeline({ ...order, paymentStatus: 'pending', orderStatus: 'pending_review', deliveryStatus: 'not_shipped', resubmitCount: nextAttempts, slipName: slipName || order.slipName, slipData: slipData || order.slipData, slipType: slipType || order.slipType }, `ลูกค้าแนบหลักฐานการชำระเงินใหม่ (ครั้งที่ ${nextAttempts})`);
+    const response = apiRequestSync('PATCH', `/orders/${encodeURIComponent(id)}/payment-proof`, {
+      slipName,
+      slipData,
+      slipType
     });
-    if (result.ok) { saveProducts(productList); saveOrders(nextOrders); }
-    return result;
+    return response?.ok
+      ? { ok: true, message: response.message || 'แนบหลักฐานใหม่แล้ว รอตรวจสอบ' }
+      : { ok: false, message: response?.message || 'ไม่สามารถแนบหลักฐานใหม่ได้' };
   }
-  function withTimeline(order, text) { return { ...order, timeline: [...(order.timeline || []), { time: new Date().toISOString(), text }] }; }
   function statusUpdatePayload(action) {
-    const actorId = Number(currentUser()?.id);
-    return Number.isInteger(actorId) && actorId > 0 ? { action, actorId } : { action };
+    return { action };
   }
-  function approveOrder(id, staffName) {
+  function approveOrder(id) {
     const remote = apiRequestSync('PATCH', `/orders/${id}/status`, statusUpdatePayload('approve'));
-    if (remote?.ok) return { ok: true, message: 'อนุมัติสลิปแล้ว' };
-    let result = { ok: false, message: 'ไม่พบคำสั่งซื้อ' };
-    const nextOrders = orders().map(order => {
-      if (order.id !== id) return order;
-      if (order.paymentStatus === 'approved') { result = { ok: false, message: 'คำสั่งซื้อนี้อนุมัติแล้ว' }; return order; }
-      if (order.paymentStatus === 'rejected' || order.orderStatus === 'cancelled') { result = { ok: false, message: 'รายการนี้ถูกยกเลิกแล้ว' }; return order; }
-      result = { ok: true, message: 'อนุมัติสลิปแล้ว รอจัดเตรียม/ส่งสินค้าเพื่อตัดสต็อก' };
-      return withTimeline({ ...order, paymentStatus: 'approved', orderStatus: 'packing', deliveryStatus: 'not_shipped', staffName }, `พนักงาน ${staffName} อนุมัติสลิป`);
-    });
-    if (result.ok) saveOrders(nextOrders);
-    return result;
+    return remote?.ok
+      ? { ok: true, message: remote.message || 'อนุมัติสลิปแล้ว' }
+      : { ok: false, message: remote?.message || 'ไม่สามารถอนุมัติสลิปได้' };
   }
-  function rejectOrder(id, staffName) {
+  function rejectOrder(id) {
     const remote = apiRequestSync('PATCH', `/orders/${id}/status`, statusUpdatePayload('reject'));
-    if (remote?.ok) return { ok: true, message: 'ยกเลิกคำสั่งซื้อแล้ว' };
-    let result = { ok: false, message: 'ไม่พบคำสั่งซื้อ' };
-    const productList = products();
-    const nextOrders = orders().map(order => {
-      if (order.id !== id) return order;
-      if (order.orderStatus === 'completed') { result = { ok: false, message: 'รายการนี้เสร็จสมบูรณ์แล้ว' }; return order; }
-      if (order.stockAdjusted) {
-        order.items.forEach(item => {
-          const p = productList.find(x => x.id === item.id);
-          if (p) { p.stock += item.qty; p.sold = Math.max(0, (p.sold || 0) - item.qty); p.status = productStockStatus(p.stock); }
-        });
-      } else {
-        order.items.forEach(item => {
-          const p = productList.find(x => x.id === item.id);
-          if (p) { p.reserved = Math.max(0, (p.reserved || 0) - item.qty); p.status = productStockStatus(p.stock); }
-        });
-      }
-      result = { ok: true, message: 'ยกเลิกและคืนสถานะสินค้าแล้ว' };
-      return withTimeline({ ...order, paymentStatus: 'rejected', orderStatus: 'cancelled', deliveryStatus: 'cancelled', stockAdjusted: false, staffName }, `พนักงาน ${staffName} ไม่อนุมัติสลิป`);
-    });
-    if (result.ok) { saveProducts(productList); saveOrders(nextOrders); }
-    return result;
+    return remote?.ok
+      ? { ok: true, message: remote.message || 'ยกเลิกคำสั่งซื้อแล้ว' }
+      : { ok: false, message: remote?.message || 'ไม่สามารถยกเลิกคำสั่งซื้อได้' };
   }
-  function updateOrderStage(id, stage, staffName) {
+  function updateOrderStage(id, stage) {
     const remote = apiRequestSync('PATCH', `/orders/${id}/status`, statusUpdatePayload(stage === 'shipped' ? 'ship' : stage));
-    if (remote?.ok) return { ok: true, message: stage === 'shipped' ? 'ส่งสินค้าแล้ว' : 'อัปเดตสถานะแล้ว' };
-    let result = { ok: false, message: 'ไม่พบคำสั่งซื้อ' };
-    const productList = products();
-    let touchedProducts = false;
-    const nextOrders = orders().map(order => {
-      if (order.id !== id) return order;
-      if (order.paymentStatus !== 'approved') { result = { ok: false, message: 'ต้องอนุมัติสลิปก่อน' }; return order; }
-      if (order.orderStatus === 'cancelled') { result = { ok: false, message: 'รายการนี้ถูกยกเลิกแล้ว' }; return order; }
-      if (stage === 'packing') {
-        result = { ok: true, message: 'อัปเดตเป็นจัดเตรียมสินค้าแล้ว' };
-        return withTimeline({ ...order, orderStatus: 'packing', staffName }, `พนักงาน ${staffName} กำลังจัดเตรียมสินค้า`);
-      }
-      if (stage === 'shipped') {
-        if (!order.stockAdjusted) {
-          const insufficient = order.items.find(item => (productList.find(p => p.id === item.id)?.stock || 0) < item.qty);
-          if (insufficient) { result = { ok: false, message: `สต็อกไม่พอ: ${insufficient.title}` }; return order; }
-          order.items.forEach(item => {
-            const p = productList.find(x => x.id === item.id);
-            if (p) {
-              p.stock = Math.max(0, p.stock - item.qty);
-              p.reserved = Math.max(0, (p.reserved || 0) - item.qty);
-              p.sold = (p.sold || 0) + item.qty;
-              p.status = productStockStatus(p.stock);
-            }
-          });
-          touchedProducts = true;
-        }
-        result = { ok: true, message: 'ส่งสินค้าและตัดสต็อกแล้ว' };
-        return withTimeline({ ...order, orderStatus: 'shipped', deliveryStatus: 'in_transit', stockAdjusted: true, staffName }, `พนักงาน ${staffName} ส่งสินค้าและตัดสต็อก`);
-      }
-      result = { ok: false, message: 'ไม่รู้จักสถานะนี้' };
-      return order;
-    });
-    if (result.ok) { if (touchedProducts) saveProducts(productList); saveOrders(nextOrders); }
-    return result;
+    return remote?.ok
+      ? { ok: true, message: remote.message || (stage === 'shipped' ? 'ส่งสินค้าแล้ว' : 'อัปเดตสถานะแล้ว') }
+      : { ok: false, message: remote?.message || 'ไม่สามารถอัปเดตสถานะคำสั่งซื้อได้' };
   }
   function customerReceive(id) {
     const remote = apiRequestSync('PATCH', `/orders/${id}/status`, { action: 'receive' });
-    if (remote?.ok) return { ok: true, message: 'ยืนยันการได้รับสินค้าแล้ว' };
-    let result = { ok: false, message: 'ไม่พบคำสั่งซื้อ' };
-    const nextOrders = orders().map(order => {
-      if (order.id !== id) return order;
-      if (order.deliveryStatus !== 'in_transit') { result = { ok: false, message: 'ยังไม่อยู่ในขั้นตอนจัดส่ง' }; return order; }
-      result = { ok: true, message: 'ยืนยันการได้รับสินค้าแล้ว' };
-      return withTimeline({ ...order, deliveryStatus: 'delivered', orderStatus: 'completed' }, 'ลูกค้ายืนยันว่าได้รับสินค้าแล้ว');
-    });
-    if (result.ok) saveOrders(nextOrders);
-    return result;
+    return remote?.ok
+      ? { ok: true, message: remote.message || 'ยืนยันการได้รับสินค้าแล้ว' }
+      : { ok: false, message: remote?.message || 'ไม่สามารถยืนยันการได้รับสินค้าได้' };
   }
   function getOrderStatusIndex(order) {
     if (order.orderStatus === 'completed' || order.deliveryStatus === 'delivered') return 3;
@@ -584,7 +606,12 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
       </div>
     </header>`;
     document.getElementById('mobileToggle')?.addEventListener('click', () => document.getElementById('navLinks')?.classList.toggle('open'));
-    document.getElementById('logoutBtn')?.addEventListener('click', () => { setCurrentUser(null); toast('ออกจากระบบแล้ว'); setTimeout(() => location.href = 'index.html', 600); });
+    document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+      await apiRequest('POST', '/auth/logout');
+      setCurrentUser(null);
+      toast('ออกจากระบบแล้ว');
+      setTimeout(() => location.href = 'index.html', 600);
+    });
   }
 
   function renderFooter() {
@@ -642,9 +669,10 @@ function bindGlobalActions(root = document) {
 
   window.BookApp = {
     STORAGE, icon, formatTHB, products, saveProducts, users, saveUsers, currentUser, setCurrentUser,
+    authToken, authHeaders, apiRequest,
     cart, saveCart, cartDetailed, cartTotal, addToCart, changeCartQty, removeCartItem,
     favorites, saveFavorites, toggleFavorite, orders, saveOrders, addresses, saveAddresses, createAddress, deleteAddress,
-    staff, saveStaff, shippingOptions, makeOrder, approveOrder, rejectOrder, updateOrderStage,
+    staff, createStaff, deleteStaff, setStaffStatus, shippingOptions, makeOrder, approveOrder, rejectOrder, updateOrderStage,
     customerReceive, getOrderStatusIndex, stepHtml, statusLabel, statusBadge, timelineList,
     bookCard, toast, requireLogin, requireRole, renderNav, renderFooter, bindGlobalActions, findProduct,
     dateTH, escapeHtml, productStockStatus, availableStock, uniqueNumericId, generateOrderId, resubmitSlip

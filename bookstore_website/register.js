@@ -1,7 +1,6 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('registerForm');
-  const API_URL = 'http://localhost:3000/api/auth/register';
 
   form.addEventListener('submit', async e => {
     e.preventDefault();
@@ -9,11 +8,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const fd = new FormData(e.target);
     const email = String(fd.get('email') || '').trim();
     const phone = String(fd.get('phone') || '').replace(/\D/g, '');
-    const password = String(fd.get('password') || '').trim();
+    const password = String(fd.get('password') || '');
     const username = String(fd.get('name') || '').trim();
 
     if (!username || !email || !password) {
       BookApp.toast('กรุณากรอกข้อมูลให้ครบถ้วน');
+      return;
+    }
+
+    if (password.length < 8) {
+      BookApp.toast('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
       return;
     }
 
@@ -23,29 +27,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username,
-          email,
-          password,
-          fullName: username,
-          phone
-        })
+      const data = await BookApp.apiRequest('POST', '/auth/register', {
+        username,
+        email,
+        password,
+        fullName: username,
+        phone
       });
 
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
+      if (!data?.ok) {
         throw new Error(data.message || 'สมัครสมาชิกไม่สำเร็จ');
       }
 
-      const localUser = { id: String(data.user?.id || data.userId), name: data.user?.fullName || username, email, phone, password, role: data.user?.role || 'member' };
-
-      BookApp.setCurrentUser(localUser);
-      BookApp.toast('สมัครสมาชิกสำเร็จ');
-      setTimeout(() => location.href = 'profile.html', 700);
+      BookApp.toast('สมัครสมาชิกสำเร็จ กรุณาเข้าสู่ระบบ');
+      setTimeout(() => location.href = 'login.html', 700);
     } catch (error) {
       BookApp.toast(error.message || 'สมัครสมาชิกไม่สำเร็จ');
     }

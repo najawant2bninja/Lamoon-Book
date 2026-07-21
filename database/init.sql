@@ -6,6 +6,7 @@ USE lamoonbook_db;
 
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS auth_sessions;
 DROP TABLE IF EXISTS notifications;
 DROP TABLE IF EXISTS support_tickets;
 DROP TABLE IF EXISTS payments;
@@ -33,7 +34,32 @@ CREATE TABLE users (
     full_name VARCHAR(100),
     phone VARCHAR(20),
     role ENUM('guest','member','staff','admin') DEFAULT 'member',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by INT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deactivated_at DATETIME NULL,
+    CONSTRAINT fk_users_created_by
+        FOREIGN KEY (created_by) REFERENCES users(user_id)
+        ON DELETE SET NULL
+        ON UPDATE CASCADE
+);
+
+CREATE TABLE auth_sessions (
+    session_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    last_used_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revoked_at DATETIME NULL,
+    UNIQUE KEY uq_auth_sessions_token_hash (token_hash),
+    KEY idx_auth_sessions_user (user_id),
+    KEY idx_auth_sessions_expiry (expires_at),
+    CONSTRAINT fk_auth_sessions_user
+        FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 CREATE TABLE categories (

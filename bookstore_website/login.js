@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('loginForm');
-  const API_URL = 'http://localhost:3000/api/auth/login';
 
   form.addEventListener('submit', async e=>{
     e.preventDefault();
@@ -8,20 +7,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const fd = new FormData(form);
     const payload = {
       email: String(fd.get('email') || '').trim(),
-      password: String(fd.get('password') || '').trim()
+      password: String(fd.get('password') || '')
     };
 
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      const data = await BookApp.apiRequest('POST', '/auth/login', payload);
 
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
-        throw new Error(data.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+      if (!data?.ok) {
+        throw new Error(data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+      }
+      if (!data?.token || !data?.user) {
+        throw new Error('Backend ไม่ได้ส่ง token สำหรับการเข้าสู่ระบบ');
       }
 
       const user = {
@@ -29,11 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
         name: data.user.fullName || data.user.username,
         email: data.user.email,
         phone: data.user.phone || '',
-        password: payload.password,
         role: data.user.role
       };
 
-      BookApp.setCurrentUser(user);
+      BookApp.setCurrentUser(user, data.token);
       BookApp.toast('เข้าสู่ระบบสำเร็จ');
       setTimeout(() => {
         location.href = user.role === 'admin' ? 'admin.html' : user.role === 'staff' ? 'staff.html' : 'products.html';

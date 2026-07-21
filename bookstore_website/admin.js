@@ -17,14 +17,38 @@ function renderProducts(){
   const rows=BookApp.products().map(p=>`<tr><td><strong>${BookApp.escapeHtml(p.title)}</strong><br><span class="helper">${BookApp.escapeHtml(p.author)}</span></td><td>${BookApp.escapeHtml(p.category)}</td><td>${BookApp.formatTHB(p.price)}</td><td><input class="input" style="width:90px" data-stock="${p.id}" type="number" value="${p.stock}"></td><td>${BookApp.statusBadge('product', p.status || BookApp.productStockStatus(p.stock))}</td><td><button class="btn btn-danger btn-small" data-del-product="${p.id}">${BookApp.icon('trash')} ลบ</button></td></tr>`).join('');
   document.getElementById('productTable').innerHTML=`<thead><tr><th>หนังสือ</th><th>หมวด</th><th>ราคา</th><th>สต็อก</th><th>สถานะ</th><th></th></tr></thead><tbody>${rows}</tbody>`;
   document.querySelectorAll('[data-stock]').forEach(i=>i.onchange=()=>{
-    fetch(`http://localhost:3000/api/products/${i.dataset.stock}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({stock:Number(i.value)})}).then(r=>r.json()).then(data=>{if(!data.ok)throw new Error();BookApp.toast('อัปเดตสต็อกแล้ว');renderAll();}).catch(()=>BookApp.toast('ไม่สามารถอัปเดตสต็อกได้'));
+    BookApp.apiRequest('PATCH',`/products/${encodeURIComponent(i.dataset.stock)}`,{stock:Number(i.value)})
+      .then(data=>{if(!data?.ok)throw new Error(data?.message||'ไม่สามารถอัปเดตสต็อกได้');BookApp.toast('อัปเดตสต็อกแล้ว');renderAll();})
+      .catch(error=>BookApp.toast(error.message||'ไม่สามารถอัปเดตสต็อกได้'));
   });
-  document.querySelectorAll('[data-del-product]').forEach(b=>b.onclick=()=>{BookApp.saveProducts(BookApp.products().filter(p=>p.id!==b.dataset.delProduct));BookApp.toast('ลบสินค้าแล้ว');renderAll();});
+  document.querySelectorAll('[data-del-product]').forEach(b=>b.onclick=async()=>{
+    if(!window.confirm('ยืนยันการลบสินค้านี้ออกจากฐานข้อมูลหรือไม่?')) return;
+    b.disabled=true;
+    const result=await BookApp.apiRequest('DELETE',`/products/${encodeURIComponent(b.dataset.delProduct)}`);
+    BookApp.toast(result.message||(result.ok?'ลบสินค้าแล้ว':'ไม่สามารถลบสินค้าได้'));
+    if(result.ok) renderAll(); else b.disabled=false;
+  });
 }
 function renderStaff(){
   const list=BookApp.staff();
-  document.getElementById('staffList').innerHTML=list.map(s=>`<article class="card staff-item"><div><strong>${BookApp.escapeHtml(s.name)}</strong><p class="helper">${BookApp.escapeHtml(s.email)}<br>${BookApp.escapeHtml(s.position)}</p></div><button class="btn btn-danger btn-small" data-del-staff="${s.id}">${BookApp.icon('trash')} ลบ</button></article>`).join('');
-  document.querySelectorAll('[data-del-staff]').forEach(b=>b.onclick=()=>{BookApp.saveStaff(BookApp.staff().filter(s=>s.id!==b.dataset.delStaff));renderAll();});
+  document.getElementById('staffList').innerHTML=list.length?list.map(s=>{
+    const isActive=s.status!=='inactive';
+    return `<article class="card staff-item"><div><strong>${BookApp.escapeHtml(s.name)}</strong><p class="helper">${BookApp.escapeHtml(s.email)}${s.phone?`<br>${BookApp.escapeHtml(s.phone)}`:''}<br><span class="badge ${isActive?'green':'red'}">${isActive?'ใช้งานอยู่':'ปิดใช้งาน'}</span></p></div>${isActive?`<button class="btn btn-danger btn-small" data-del-staff="${s.id}">${BookApp.icon('trash')} ปิดใช้งาน</button>`:`<button class="btn btn-secondary btn-small" data-enable-staff="${s.id}">เปิดใช้งาน</button>`}</article>`;
+  }).join(''):'<div class="empty-state"><h3>ยังไม่มีพนักงาน</h3></div>';
+  document.querySelectorAll('[data-del-staff]').forEach(b=>b.onclick=async()=>{
+    const person=list.find(s=>String(s.id)===String(b.dataset.delStaff));
+    if(!window.confirm(`ยืนยันปิดใช้งานบัญชี ${person?.name||'พนักงานคนนี้'} หรือไม่?`)) return;
+    b.disabled=true;
+    const result=await BookApp.deleteStaff(b.dataset.delStaff);
+    BookApp.toast(result.message|| (result.ok?'ปิดใช้งานพนักงานแล้ว':'ไม่สามารถปิดใช้งานพนักงานได้'));
+    if(result.ok) renderAll(); else b.disabled=false;
+  });
+  document.querySelectorAll('[data-enable-staff]').forEach(b=>b.onclick=async()=>{
+    b.disabled=true;
+    const result=await BookApp.setStaffStatus(b.dataset.enableStaff,'active');
+    BookApp.toast(result.message|| (result.ok?'เปิดใช้งานพนักงานแล้ว':'ไม่สามารถเปิดใช้งานพนักงานได้'));
+    if(result.ok) renderAll(); else b.disabled=false;
+  });
 }
 function renderApprovals(){
   const rows=BookApp.orders().map(o=>`<tr><td><strong>${o.id}</strong><br><span class="helper">${BookApp.dateTH(o.createdAt)}</span></td><td>${BookApp.escapeHtml(o.customerName)}</td><td>${BookApp.formatTHB(o.total)}</td><td>${BookApp.statusBadge('payment',o.paymentStatus)}</td><td>${BookApp.escapeHtml(o.staffName)}</td><td>${BookApp.statusBadge('order',o.orderStatus)}</td></tr>`).join('');
@@ -71,15 +95,9 @@ function bindForms(){
     const fd=new FormData(e.target);
     const file=fd.get('coverFile');
     const saveProduct=()=>{
-      fetch('http://localhost:3000/api/products',{method:'POST',body:fd})
-        .then(async res => {
-          const data = await res.json().catch(() => null);
-          if (!res.ok || !data?.ok) {
-            console.error('Add product response failed', { status: res.status, statusText: res.statusText, data });
-            const message = data?.message || `${res.status} ${res.statusText}`;
-            const detail = data?.error ? ` (${data.error})` : '';
-            throw new Error(message + detail);
-          }
+      BookApp.apiRequest('POST','/products',fd)
+        .then(data => {
+          if (!data?.ok) throw new Error(data?.message || 'ไม่สามารถเพิ่มสินค้าได้');
           return data;
         })
         .then(data=>{
@@ -111,14 +129,27 @@ function bindForms(){
     };
     saveProduct();
   };
-  document.getElementById('staffForm').onsubmit=e=>{
+  document.getElementById('staffForm').onsubmit=async e=>{
     e.preventDefault();
     const fd=new FormData(e.target);
-    BookApp.saveStaff([{id:'s'+Date.now(),name:fd.get('name'),email:fd.get('email'),position:fd.get('position'),status:'active'},...BookApp.staff()]);
-    e.target.reset();
-    BookApp.toast('เพิ่มพนักงานแล้ว');
-    renderAll();
+    const name=String(fd.get('name')||'').trim();
+    const email=String(fd.get('email')||'').trim();
+    const phone=String(fd.get('phone')||'').replace(/\D/g,'');
+    const password=String(fd.get('password')||'');
+    const confirmPassword=String(fd.get('confirmPassword')||'');
+    if(!name||!email||!password){BookApp.toast('กรุณากรอกชื่อ อีเมล และรหัสผ่านให้ครบ');return;}
+    if(password.length<8){BookApp.toast('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');return;}
+    if(password!==confirmPassword){BookApp.toast('รหัสผ่านและการยืนยันไม่ตรงกัน');return;}
+    if(phone&&!/^\d{10}$/.test(phone)){BookApp.toast('เบอร์โทรต้องเป็นตัวเลข 10 หลัก');return;}
+    const submit=e.target.querySelector('[type="submit"]');
+    submit.disabled=true;
+    const result=await BookApp.createStaff({name,email,phone,password});
+    BookApp.toast(result.message||(result.ok?'เพิ่มพนักงานแล้ว':'ไม่สามารถเพิ่มพนักงานได้'));
+    if(result.ok){e.target.reset();renderAll();}
+    submit.disabled=false;
   };
+  const staffPhone=document.querySelector('#staffForm [name="phone"]');
+  staffPhone?.addEventListener('input',()=>{staffPhone.value=staffPhone.value.replace(/\D/g,'').slice(0,10);});
 }
 function drawCharts(){
   const orders=BookApp.orders()||[];

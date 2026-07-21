@@ -138,17 +138,38 @@
                     class="input"
                     name="name"
                     placeholder="ชื่อพนักงาน"
+                    autocomplete="name"
                     required
                   /><input
                     class="input"
                     name="email"
                     type="email"
                     placeholder="อีเมล"
+                    autocomplete="email"
                     required
                   /><input
                     class="input"
-                    name="position"
-                    placeholder="ตำแหน่ง"
+                    name="phone"
+                    type="tel"
+                    inputmode="numeric"
+                    maxlength="10"
+                    placeholder="เบอร์โทร (ไม่บังคับ)"
+                    autocomplete="tel"
+                  /><input
+                    class="input"
+                    name="password"
+                    type="password"
+                    minlength="8"
+                    placeholder="รหัสผ่าน (อย่างน้อย 8 ตัว)"
+                    autocomplete="new-password"
+                    required
+                  /><input
+                    class="input"
+                    name="confirmPassword"
+                    type="password"
+                    minlength="8"
+                    placeholder="ยืนยันรหัสผ่าน"
+                    autocomplete="new-password"
                     required
                   /><button class="btn btn-primary" type="submit">
                     เพิ่มพนักงาน

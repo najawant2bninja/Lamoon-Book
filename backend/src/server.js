@@ -3,6 +3,7 @@ const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const pool = require('./config/db');
+const ensureSchema = require('./config/ensureSchema');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -51,6 +52,18 @@ app.use((error, req, res, next) => {
   res.status(500).json({ ok: false, message: 'Unexpected server error', error: error.message });
 });
 
-app.listen(PORT, () => {
-  console.log(`Lamoonbook backend listening on http://localhost:${PORT}`);
-});
+async function start() {
+  await ensureSchema();
+  return app.listen(PORT, () => {
+    console.log(`Lamoonbook backend listening on http://localhost:${PORT}`);
+  });
+}
+
+if (require.main === module) {
+  start().catch(error => {
+    console.error('Failed to start Lamoonbook backend:', error);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { app, start };

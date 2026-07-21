@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const pool = require('../config/db');
+const { authenticate, allowRoles } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -98,7 +99,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', upload.single('coverFile'), async (req, res) => {
+router.post('/', authenticate, allowRoles('admin'), upload.single('coverFile'), async (req, res) => {
   const { title, author, isbn, category, price, stock, desc } = req.body;
   const file = req.file;
   const coverPath = file ? `assets/cover/${file.filename}` : null;
@@ -120,7 +121,7 @@ router.post('/', upload.single('coverFile'), async (req, res) => {
   }
 });
 
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', authenticate, allowRoles('admin'), async (req, res) => {
   const { stock } = req.body;
   if (!Number.isFinite(Number(stock))) return res.status(400).json({ ok: false, message: 'Invalid stock' });
   try {
@@ -130,7 +131,7 @@ router.patch('/:id', async (req, res) => {
   } catch (error) { res.status(500).json({ ok: false, message: 'Failed to update product', error: error.message }); }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, allowRoles('admin'), async (req, res) => {
   try {
     const [result] = await pool.query('DELETE FROM books WHERE book_id = ?', [req.params.id]);
     if (!result.affectedRows) return res.status(404).json({ ok: false, message: 'Product not found' });

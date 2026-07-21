@@ -1,7 +1,13 @@
 const express = require('express');
 const pool = require('../config/db');
+const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
+
+router.use('/:userId', authenticate, (req, res, next) => {
+  if (req.user.role === 'admin' || String(req.user.id) === String(req.params.userId)) return next();
+  return res.status(403).json({ ok: false, message: 'ไม่มีสิทธิ์เข้าถึงที่อยู่นี้' });
+});
 
 router.get('/:userId', async (req, res) => {
   try {
