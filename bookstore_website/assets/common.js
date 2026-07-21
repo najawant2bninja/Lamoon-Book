@@ -388,8 +388,12 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     return result;
   }
   function withTimeline(order, text) { return { ...order, timeline: [...(order.timeline || []), { time: new Date().toISOString(), text }] }; }
+  function statusUpdatePayload(action) {
+    const actorId = Number(currentUser()?.id);
+    return Number.isInteger(actorId) && actorId > 0 ? { action, actorId } : { action };
+  }
   function approveOrder(id, staffName) {
-    const remote = apiRequestSync('PATCH', `/orders/${id}/status`, { action: 'approve' });
+    const remote = apiRequestSync('PATCH', `/orders/${id}/status`, statusUpdatePayload('approve'));
     if (remote?.ok) return { ok: true, message: 'อนุมัติสลิปแล้ว' };
     let result = { ok: false, message: 'ไม่พบคำสั่งซื้อ' };
     const nextOrders = orders().map(order => {
@@ -403,7 +407,7 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     return result;
   }
   function rejectOrder(id, staffName) {
-    const remote = apiRequestSync('PATCH', `/orders/${id}/status`, { action: 'reject' });
+    const remote = apiRequestSync('PATCH', `/orders/${id}/status`, statusUpdatePayload('reject'));
     if (remote?.ok) return { ok: true, message: 'ยกเลิกคำสั่งซื้อแล้ว' };
     let result = { ok: false, message: 'ไม่พบคำสั่งซื้อ' };
     const productList = products();
@@ -428,7 +432,7 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     return result;
   }
   function updateOrderStage(id, stage, staffName) {
-    const remote = apiRequestSync('PATCH', `/orders/${id}/status`, { action: stage === 'shipped' ? 'ship' : stage });
+    const remote = apiRequestSync('PATCH', `/orders/${id}/status`, statusUpdatePayload(stage === 'shipped' ? 'ship' : stage));
     if (remote?.ok) return { ok: true, message: stage === 'shipped' ? 'ส่งสินค้าแล้ว' : 'อัปเดตสถานะแล้ว' };
     let result = { ok: false, message: 'ไม่พบคำสั่งซื้อ' };
     const productList = products();

@@ -8,11 +8,13 @@ async function orderList(where = '', params = []) {
            o.shipping_method_id AS shippingMethodId, u.user_id AS customerId, u.full_name AS customerName,
            u.email AS customerEmail, sm.method_name AS shippingMethodName,
            a.recipient_name AS receiver, a.phone AS addressPhone, a.address_detail AS addressDetail,
-           p.payment_status AS paymentStatus, p.proof_image_url AS slipData, p.qr_code_ref AS slipName
+           p.payment_status AS paymentStatus, p.proof_image_url AS slipData, p.qr_code_ref AS slipName,
+           verifier.full_name AS verifiedByName
     FROM orders o JOIN users u ON u.user_id = o.user_id
       JOIN shipping_methods sm ON sm.shipping_method_id = o.shipping_method_id
       JOIN shipping_addresses a ON a.address_id = o.address_id
       LEFT JOIN payments p ON p.order_id = o.order_id
+      LEFT JOIN users verifier ON verifier.user_id = p.verified_by
     ${where} ORDER BY o.order_date DESC`, params);
   if (!orders.length) return [];
   const ids = orders.map(order => order.id);
@@ -31,7 +33,8 @@ async function orderList(where = '', params = []) {
       orderStatus: order.orderStatus === 'paid' ? 'packing' : order.orderStatus === 'shipping' ? 'shipped' : order.orderStatus,
       paymentStatus: order.paymentStatus === 'success' ? 'approved' : order.paymentStatus === 'failed' ? 'rejected' : 'pending',
       deliveryStatus: order.orderStatus === 'shipping' ? 'in_transit' : order.orderStatus === 'completed' ? 'delivered' : order.orderStatus === 'cancelled' ? 'cancelled' : 'not_shipped',
-      slipName: order.slipName || 'payment-slip', staffName: '-'
+      slipName: order.slipName || 'payment-slip',
+      staffName: order.verifiedByName || (['success', 'failed'].includes(order.paymentStatus) ? 'ไม่พบข้อมูลผู้ตรวจ (รายการเดิม)' : '-')
     };
   });
 }
@@ -81,15 +84,31 @@ router.post('/create', async (req, res) => {
 });
 
 router.patch('/:id/status', async (req, res) => {
-  const { action } = req.body;
+  const { action, actorId } = req.body;
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
     const [rows] = await conn.query('SELECT order_status FROM orders WHERE order_id = ? FOR UPDATE', [req.params.id]);
     if (!rows.length) throw new Error('Order not found');
+    let updatedBy = null;
+    if (actorId !== undefined && actorId !== null) {
+      const normalizedActorId = Number(actorId);
+      if (!Number.isInteger(normalizedActorId) || normalizedActorId <= 0) throw new Error('Invalid staff user');
+      const [actors] = await conn.query("SELECT user_id FROM users WHERE user_id = ? AND role IN ('staff', 'admin') LIMIT 1", [normalizedActorId]);
+      if (!actors.length) throw new Error('Invalid staff user');
+      updatedBy = normalizedActorId;
+    }
     let status;
-    if (action === 'approve') { status = 'paid'; await conn.query("UPDATE payments SET payment_status = 'success', verified_at = NOW() WHERE order_id = ?", [req.params.id]); }
-    else if (action === 'reject') { status = 'cancelled'; await conn.query("UPDATE payments SET payment_status = 'failed' WHERE order_id = ?", [req.params.id]); }
+    if (action === 'approve') {
+      if (!updatedBy) throw new Error('Approver is required');
+      status = 'paid';
+      await conn.query("UPDATE payments SET payment_status = 'success', verified_by = ?, verified_at = NOW() WHERE order_id = ?", [updatedBy, req.params.id]);
+    }
+    else if (action === 'reject') {
+      if (!updatedBy) throw new Error('Reviewer is required');
+      status = 'cancelled';
+      await conn.query("UPDATE payments SET payment_status = 'failed', verified_by = ?, verified_at = NOW() WHERE order_id = ?", [updatedBy, req.params.id]);
+    }
     else if (action === 'ship') {
       const [items] = await conn.query('SELECT book_id, quantity FROM order_items WHERE order_id = ?', [req.params.id]);
       for (const item of items) {
@@ -101,7 +120,7 @@ router.patch('/:id/status', async (req, res) => {
     else if (action === 'packing') status = 'paid';
     else throw new Error('Unknown status action');
     await conn.query('UPDATE orders SET order_status = ? WHERE order_id = ?', [status, req.params.id]);
-    await conn.query('INSERT INTO order_status_history (order_id, status) VALUES (?, ?)', [req.params.id, status]);
+    await conn.query('INSERT INTO order_status_history (order_id, status, updated_by) VALUES (?, ?, ?)', [req.params.id, status, updatedBy]);
     await conn.commit(); res.json({ ok: true, orderStatus: status });
   } catch (error) { await conn.rollback(); res.status(400).json({ ok: false, message: error.message || 'Failed to update order' }); }
   finally { conn.release(); }
