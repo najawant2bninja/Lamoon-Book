@@ -39,11 +39,56 @@ router.post('/:userId', async (req, res) => {
 });
 
 router.delete('/:userId/:addressId', async (req, res) => {
+  let conn;
   try {
-    const [result] = await pool.query('DELETE FROM shipping_addresses WHERE address_id = ? AND user_id = ?', [req.params.addressId, req.params.userId]);
-    if (!result.affectedRows) return res.status(404).json({ ok: false, message: 'Address not found' });
-    res.json({ ok: true });
-  } catch (error) { res.status(500).json({ ok: false, message: 'Failed to delete address', error: error.message }); }
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    const [addresses] = await conn.query(
+      `SELECT address_id
+       FROM shipping_addresses
+       WHERE address_id = ? AND user_id = ?
+       LIMIT 1
+       FOR UPDATE`,
+      [req.params.addressId, req.params.userId]
+    );
+    if (!addresses.length) {
+      await conn.rollback();
+      return res.status(404).json({ ok: false, message: 'Address not found' });
+    }
+
+    const [orders] = await conn.query(
+      'SELECT order_id FROM orders WHERE address_id = ? LIMIT 1',
+      [req.params.addressId]
+    );
+    if (orders.length) {
+      await conn.rollback();
+      return res.status(409).json({
+        ok: false,
+        message: 'This address is used by an order and must be kept in order history',
+      });
+    }
+
+    await conn.query(
+      'DELETE FROM shipping_addresses WHERE address_id = ? AND user_id = ?',
+      [req.params.addressId, req.params.userId]
+    );
+    await conn.commit();
+    return res.json({ ok: true });
+  } catch (error) {
+    if (conn) {
+      try { await conn.rollback(); } catch (rollbackError) { console.error(rollbackError); }
+    }
+    if (error.code === 'ER_ROW_IS_REFERENCED_2' || Number(error.errno) === 1451) {
+      return res.status(409).json({
+        ok: false,
+        message: 'This address is used by an order and must be kept in order history',
+      });
+    }
+    return res.status(500).json({ ok: false, message: 'Failed to delete address', error: error.message });
+  } finally {
+    if (conn) conn.release();
+  }
 });
 
 module.exports = router;

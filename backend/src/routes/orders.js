@@ -1,4 +1,5 @@
 const express = require('express');
+const { randomInt } = require('crypto');
 const pool = require('../config/db');
 const { authenticate, allowRoles } = require('../middleware/auth');
 
@@ -7,6 +8,8 @@ const router = express.Router();
 const STAFF_ROLES = new Set(['staff', 'admin']);
 const MAX_PAYMENT_PROOF_DATA_URL_LENGTH = 8 * 1024 * 1024;
 const PAYMENT_PROOF_DATA_URL_HEADER = /^data:(?:image\/(?:jpeg|png|webp|gif)|application\/pdf);base64$/i;
+const ORDER_NUMBER_PATTERN = /^ORD\d{16,29}$/;
+const ORDER_NUMBER_RETRY_LIMIT = 5;
 const CLIENT_ORDER_STATUSES = {
   pending: 'pending_review',
   paid: 'packing',
@@ -36,6 +39,53 @@ function clientPaymentStatus(status, hasPayment = true) {
 function positiveInteger(value) {
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function generateOrderNumber() {
+  // Date.now() contributes epoch milliseconds (the fractional-second part),
+  // while six cryptographically random digits prevent requests created in the
+  // same millisecond from receiving the same public number.
+  return `ORD${Date.now()}${String(randomInt(0, 1_000_000)).padStart(6, '0')}`;
+}
+
+function parseOrderReference(value) {
+  const normalized = String(value ?? '').trim().toUpperCase();
+  if (ORDER_NUMBER_PATTERN.test(normalized)) {
+    return { column: 'order_number', value: normalized };
+  }
+
+  const legacyId = positiveInteger(normalized);
+  return legacyId ? { column: 'order_id', value: legacyId } : null;
+}
+
+function isOrderNumberCollision(error) {
+  return error?.code === 'ER_DUP_ENTRY'
+    && String(error.sqlMessage || error.message || '').includes('uq_orders_order_number');
+}
+
+async function insertOrder(conn, { userId, addressId, shippingMethodId, total }) {
+  for (let attempt = 0; attempt < ORDER_NUMBER_RETRY_LIMIT; attempt += 1) {
+    const orderNumber = generateOrderNumber();
+    try {
+      const [result] = await conn.query(`
+        INSERT INTO orders
+          (order_number, user_id, address_id, shipping_method_id, total_price, order_status)
+        VALUES (?, ?, ?, ?, ?, 'pending')`, [
+        orderNumber,
+        userId,
+        addressId,
+        shippingMethodId,
+        total,
+      ]);
+      return { result, orderNumber };
+    } catch (error) {
+      if (!isOrderNumberCollision(error) || attempt === ORDER_NUMBER_RETRY_LIMIT - 1) {
+        throw error;
+      }
+    }
+  }
+
+  throw new RequestError(503, 'Unable to allocate a unique order number');
 }
 
 function isStaff(user) {
@@ -87,7 +137,8 @@ async function rollbackQuietly(conn) {
 
 async function orderList(where = '', params = []) {
   const [orders] = await pool.query(`
-    SELECT o.order_id AS id, o.order_date AS createdAt, o.total_price AS total,
+    SELECT o.order_id AS internalId, o.order_number AS id,
+           o.order_date AS createdAt, o.total_price AS total,
            o.order_status AS databaseOrderStatus, o.shipping_method_id AS shippingMethodId,
            u.user_id AS customerId, COALESCE(u.full_name, u.username) AS customerName,
            u.email AS customerEmail,
@@ -114,7 +165,7 @@ async function orderList(where = '', params = []) {
 
   if (!orders.length) return [];
 
-  const ids = orders.map(order => Number(order.id));
+  const ids = orders.map(order => Number(order.internalId));
   const marks = ids.map(() => '?').join(',');
   const [items] = await pool.query(`
     SELECT oi.order_id, oi.book_id AS id, oi.quantity AS qty,
@@ -154,7 +205,7 @@ async function orderList(where = '', params = []) {
   }
 
   return orders.map(order => {
-    const orderId = Number(order.id);
+    const orderId = Number(order.internalId);
     const orderItems = itemsByOrder.get(orderId) || [];
     const history = historyByOrder.get(orderId) || [];
     const subtotal = orderItems.reduce(
@@ -165,8 +216,9 @@ async function orderList(where = '', params = []) {
     const hasPayment = order.paymentId !== null && order.paymentId !== undefined;
     const paymentProofIsSafe = hasPayment && isSupportedPaymentProof(order.slipData);
 
+    const { internalId, ...publicOrder } = order;
     return {
-      ...order,
+      ...publicOrder,
       id: String(order.id),
       customerId: String(order.customerId),
       total,
@@ -297,9 +349,10 @@ router.post('/create', authenticate, async (req, res) => {
       SELECT book_id, price, stock_quantity
       FROM books
       WHERE book_id IN (${bookIds.map(() => '?').join(',')})
+        AND is_active = TRUE
       FOR UPDATE`, bookIds);
     if (books.length !== normalizedItems.length) {
-      throw new RequestError(409, 'A product no longer exists');
+      throw new RequestError(409, 'A product no longer exists or is inactive');
     }
 
     // Pending and paid orders reserve units. Holding the book rows above makes
@@ -353,10 +406,12 @@ router.post('/create', authenticate, async (req, res) => {
 
     const shipping = Number(Number(shippingRates[0].price).toFixed(2));
     const total = Number((subtotal + shipping).toFixed(2));
-    const [order] = await conn.query(`
-      INSERT INTO orders
-        (user_id, address_id, shipping_method_id, total_price, order_status)
-      VALUES (?, ?, ?, ?, 'pending')`, [userId, addressId, shippingMethodId, total]);
+    const { result: order, orderNumber } = await insertOrder(conn, {
+      userId,
+      addressId,
+      shippingMethodId,
+      total,
+    });
 
     for (const item of normalizedItems) {
       const book = books.find(row => Number(row.book_id) === item.bookId);
@@ -388,7 +443,7 @@ router.post('/create', authenticate, async (req, res) => {
     await conn.commit();
     return res.status(201).json({
       ok: true,
-      orderId: String(order.insertId),
+      orderId: orderNumber,
       subtotal,
       shipping,
       total,
@@ -404,12 +459,12 @@ router.post('/create', authenticate, async (req, res) => {
 });
 
 router.patch('/:id/payment-proof', authenticate, async (req, res) => {
-  const orderId = positiveInteger(req.params.id);
+  const orderReference = parseOrderReference(req.params.id);
   const userId = positiveInteger(req.user.id);
   const slipName = req.body.slipName;
   const slipData = req.body.slipData;
 
-  if (!orderId || !userId) {
+  if (!orderReference || !userId) {
     return res.status(400).json({ ok: false, message: 'Invalid order or authenticated user ID' });
   }
   if (!isSupportedPaymentProof(slipData)) {
@@ -430,11 +485,12 @@ router.patch('/:id/payment-proof', authenticate, async (req, res) => {
     const [orders] = await conn.query(`
       SELECT order_id, user_id, order_status, total_price
       FROM orders
-      WHERE order_id = ?
+      WHERE ${orderReference.column} = ?
       LIMIT 1
-      FOR UPDATE`, [orderId]);
+      FOR UPDATE`, [orderReference.value]);
     if (!orders.length) throw new RequestError(404, 'Order not found');
     const order = orders[0];
+    const orderId = Number(order.order_id);
     if (Number(order.user_id) !== userId) {
       throw new RequestError(403, 'You may only submit payment proof for your own order');
     }
@@ -465,8 +521,11 @@ router.patch('/:id/payment-proof', authenticate, async (req, res) => {
       SELECT book_id, stock_quantity
       FROM books
       WHERE book_id IN (${bookIds.map(() => '?').join(',')})
+        AND is_active = TRUE
       FOR UPDATE`, bookIds);
-    if (books.length !== bookIds.length) throw new RequestError(409, 'A product no longer exists');
+    if (books.length !== bookIds.length) {
+      throw new RequestError(409, 'A product no longer exists or is inactive');
+    }
     const [reservationRows] = await conn.query(`
       SELECT oi.book_id, COALESCE(SUM(oi.quantity), 0) AS reserved_quantity
       FROM order_items oi
@@ -521,11 +580,11 @@ router.patch('/:id/payment-proof', authenticate, async (req, res) => {
 
 router.patch('/:id/status', authenticate, async (req, res) => {
   const body = req.body && typeof req.body === 'object' ? req.body : {};
-  const orderId = positiveInteger(req.params.id);
+  const orderReference = parseOrderReference(req.params.id);
   const action = typeof body.action === 'string' ? body.action.trim().toLowerCase() : '';
   const actorId = positiveInteger(req.user.id);
 
-  if (!orderId || !actorId) {
+  if (!orderReference || !actorId) {
     return res.status(400).json({ ok: false, message: 'Invalid order or authenticated user ID' });
   }
   if (!['approve', 'reject', 'packing', 'ship', 'receive'].includes(action)) {
@@ -543,12 +602,13 @@ router.patch('/:id/status', authenticate, async (req, res) => {
     const [rows] = await conn.query(`
       SELECT order_id, user_id, order_status, total_price
       FROM orders
-      WHERE order_id = ?
+      WHERE ${orderReference.column} = ?
       LIMIT 1
-      FOR UPDATE`, [orderId]);
+      FOR UPDATE`, [orderReference.value]);
     if (!rows.length) throw new RequestError(404, 'Order not found');
 
     const order = rows[0];
+    const orderId = Number(order.order_id);
     if (action === 'receive' && !isStaff(req.user) && Number(order.user_id) !== actorId) {
       throw new RequestError(403, 'You may only confirm receipt of your own order');
     }

@@ -74,10 +74,13 @@ CREATE TABLE books (
     isbn VARCHAR(20) UNIQUE,
     category_id INT,
     price DECIMAL(10,2) NOT NULL,
-    stock_quantity INT DEFAULT 0,
+    stock_quantity INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     description TEXT,
     cover_image_url VARCHAR(255),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_books_price_positive CHECK (price > 0),
+    CONSTRAINT chk_books_stock_nonnegative CHECK (stock_quantity >= 0),
     CONSTRAINT fk_books_category
         FOREIGN KEY (category_id) REFERENCES categories(category_id)
         ON DELETE SET NULL
@@ -150,18 +153,21 @@ CREATE TABLE shipping_addresses (
 
 CREATE TABLE orders (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_number VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     user_id INT NOT NULL,
     address_id INT NOT NULL,
     shipping_method_id INT NOT NULL,
     order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     total_price DECIMAL(10,2) NOT NULL,
     order_status ENUM('pending','paid','shipping','completed','cancelled') DEFAULT 'pending',
+    UNIQUE KEY uq_orders_order_number (order_number),
     CONSTRAINT fk_orders_user
         FOREIGN KEY (user_id) REFERENCES users(user_id)
         ON DELETE CASCADE,
     CONSTRAINT fk_orders_address
         FOREIGN KEY (address_id) REFERENCES shipping_addresses(address_id)
-        ON DELETE CASCADE,
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE,
     CONSTRAINT fk_orders_shipping
         FOREIGN KEY (shipping_method_id) REFERENCES shipping_methods(shipping_method_id)
         ON DELETE RESTRICT
@@ -178,7 +184,8 @@ CREATE TABLE order_items (
         ON DELETE CASCADE,
     CONSTRAINT fk_order_items_book
         FOREIGN KEY (book_id) REFERENCES books(book_id)
-        ON DELETE CASCADE
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
 );
 
 CREATE TABLE order_status_history (

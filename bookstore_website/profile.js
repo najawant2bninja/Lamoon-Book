@@ -117,7 +117,7 @@ function openPasswordModal() {
         newPassword
       });
       if (!data?.ok) throw new Error(data?.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้');
-      BookApp.toast('เปลี่ยนรหัสผ่านสำเร็จ');
+      BookApp.toast(data.message || 'เปลี่ยนรหัสผ่านสำเร็จ เซสชันอื่นถูกออกจากระบบแล้ว');
       closeModal();
     } catch (error) {
       BookApp.toast(error.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้');

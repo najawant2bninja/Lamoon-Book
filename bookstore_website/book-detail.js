@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   const related = BookApp.products().filter(p => p.category === product.category && p.id !== product.id).slice(0, 4);
-  const favActive = BookApp.favorites().includes(product.id);
+  const favActive = BookApp.favorites().includes(String(product.id));
   const avail = BookApp.availableStock(product);
   const outOfStock = avail <= 0;
   
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
   root.innerHTML = `
     <div class="detail-layout">
       <div class="book-cover detail-cover">
-        <img src="${BookApp.escapeHtml(product.coverUrl || product.cover || 'assets/cover/default.jpg')}" alt="${BookApp.escapeHtml(product.title)}" class="detail-cover-img" onerror="this.onerror=null;this.src='assets/cover/default.jpg'">
+        <img src="${BookApp.escapeHtml(product.coverUrl || product.cover || 'assets/cover/default.svg')}" alt="${BookApp.escapeHtml(product.title)}" class="detail-cover-img" onerror="this.onerror=null;this.src='assets/cover/default.svg'">
       </div>
       <article class="card detail-panel">
         <div class="detail-meta">

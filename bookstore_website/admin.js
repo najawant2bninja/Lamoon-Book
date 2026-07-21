@@ -1,4 +1,38 @@
-document.addEventListener('DOMContentLoaded',()=>{ if(!BookApp.requireRole('admin')) return; renderAll(); bindForms(); });
+const CHART_TIME_ZONE='Asia/Bangkok';
+const CHART_FILTER_KEYS=['orderStatus','category','delivery'];
+const CHART_FILTER_META={
+  orderStatus:{title:'สถานะคำสั่งซื้อ',subtitleId:'orderStatusChartSubtitle',canvasId:'salesChart'},
+  category:{title:'หมวดหมู่ขายได้',subtitleId:'categoryChartSubtitle',canvasId:'categoryChart'},
+  delivery:{title:'ประเภทการจัดส่ง',subtitleId:'deliveryChartSubtitle',canvasId:'deliveryChart'}
+};
+const CHART_DATE_PARTS_FORMATTER=new Intl.DateTimeFormat('en-US-u-ca-gregory-nu-latn',{
+  timeZone:CHART_TIME_ZONE,
+  year:'numeric',
+  month:'2-digit',
+  day:'2-digit'
+});
+const chartFilterState={};
+let chartResizeTimer=null;
+let chartResizeBound=false;
+let chartDataCache=null;
+const PRODUCT_COVER_TYPES=new Set(['image/jpeg','image/png','image/webp','image/gif']);
+const PRODUCT_COVER_EXTENSIONS=new Set(['.jpg','.jpeg','.png','.webp','.gif']);
+
+function isSupportedProductCover(file){
+  if(!file||!file.name) return true;
+  const name=String(file.name).toLowerCase();
+  const dotIndex=name.lastIndexOf('.');
+  const extension=dotIndex>=0?name.slice(dotIndex):'';
+  return PRODUCT_COVER_TYPES.has(String(file.type||'').toLowerCase())&&PRODUCT_COVER_EXTENSIONS.has(extension);
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  if(!BookApp.requireRole('admin')) return;
+  initializeChartFilters();
+  renderAll();
+  bindForms();
+  bindChartResize();
+});
 function renderAll(){ renderKpis(); renderLowStock(); renderProducts(); renderStaff(); renderApprovals(); drawCharts(); }
 function renderKpis(){
   const p=BookApp.products(), o=BookApp.orders();
@@ -14,10 +48,16 @@ function renderLowStock(){
   document.getElementById('lowStock').innerHTML=items.length?items.map(p=>`<div class="low-item"><div><strong>${BookApp.escapeHtml(p.title)}</strong><p class="helper">${BookApp.escapeHtml(p.category)}</p></div><span class="badge red">${p.stock} เล่ม</span></div>`).join(''):`<div class="empty-state"><div class="icon">${BookApp.icon('check')}</div><h3>ไม่มีสินค้าใกล้หมด</h3></div>`;
 }
 function renderProducts(){
-  const rows=BookApp.products().map(p=>`<tr><td><strong>${BookApp.escapeHtml(p.title)}</strong><br><span class="helper">${BookApp.escapeHtml(p.author)}</span></td><td>${BookApp.escapeHtml(p.category)}</td><td>${BookApp.formatTHB(p.price)}</td><td><input class="input" style="width:90px" data-stock="${p.id}" type="number" value="${p.stock}"></td><td>${BookApp.statusBadge('product', p.status || BookApp.productStockStatus(p.stock))}</td><td><button class="btn btn-danger btn-small" data-del-product="${p.id}">${BookApp.icon('trash')} ลบ</button></td></tr>`).join('');
+  const rows=BookApp.products().map(p=>`<tr><td><strong>${BookApp.escapeHtml(p.title)}</strong><br><span class="helper">${BookApp.escapeHtml(p.author)}</span></td><td>${BookApp.escapeHtml(p.category)}</td><td>${BookApp.formatTHB(p.price)}</td><td><input class="input" style="width:90px" data-stock="${p.id}" type="number" inputmode="numeric" min="0" step="1" value="${p.stock}"></td><td>${BookApp.statusBadge('product', p.status || BookApp.productStockStatus(p.stock))}</td><td><button class="btn btn-danger btn-small" data-del-product="${p.id}">${BookApp.icon('trash')} ลบ</button></td></tr>`).join('');
   document.getElementById('productTable').innerHTML=`<thead><tr><th>หนังสือ</th><th>หมวด</th><th>ราคา</th><th>สต็อก</th><th>สถานะ</th><th></th></tr></thead><tbody>${rows}</tbody>`;
   document.querySelectorAll('[data-stock]').forEach(i=>i.onchange=()=>{
-    BookApp.apiRequest('PATCH',`/products/${encodeURIComponent(i.dataset.stock)}`,{stock:Number(i.value)})
+    const stock=Number(i.value);
+    if(!Number.isSafeInteger(stock)||stock<0){
+      BookApp.toast('สต็อกต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป');
+      renderProducts();
+      return;
+    }
+    BookApp.apiRequest('PATCH',`/products/${encodeURIComponent(i.dataset.stock)}`,{stock})
       .then(data=>{if(!data?.ok)throw new Error(data?.message||'ไม่สามารถอัปเดตสต็อกได้');BookApp.toast('อัปเดตสต็อกแล้ว');renderAll();})
       .catch(error=>BookApp.toast(error.message||'ไม่สามารถอัปเดตสต็อกได้'));
   });
@@ -74,6 +114,12 @@ function bindForms(){
     coverInput.onchange=()=>{
       const file=coverInput.files?.[0];
       if(file){
+        if(!isSupportedProductCover(file)){
+          coverInput.value='';
+          resetPreview();
+          BookApp.toast('รองรับรูปปกเฉพาะ JPG, PNG, WebP หรือ GIF');
+          return;
+        }
         const reader=new FileReader();
         reader.onload=()=>{
           if(coverPreview){
@@ -94,6 +140,20 @@ function bindForms(){
     e.preventDefault();
     const fd=new FormData(e.target);
     const file=fd.get('coverFile');
+    const price=Number(fd.get('price'));
+    const stock=Number(fd.get('stock'));
+    if(!Number.isFinite(price)||price<=0){
+      BookApp.toast('ราคาต้องเป็นตัวเลขมากกว่า 0');
+      return;
+    }
+    if(!Number.isSafeInteger(stock)||stock<0){
+      BookApp.toast('สต็อกต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป');
+      return;
+    }
+    if(file?.name&&!isSupportedProductCover(file)){
+      BookApp.toast('รองรับรูปปกเฉพาะ JPG, PNG, WebP หรือ GIF');
+      return;
+    }
     const saveProduct=()=>{
       BookApp.apiRequest('POST','/products',fd)
         .then(data => {
@@ -107,10 +167,10 @@ function bindForms(){
             author:fd.get('author'),
             isbn:fd.get('isbn'),
             category:fd.get('category'),
-            price:Number(fd.get('price')),
-            stock:Number(fd.get('stock')),
-            status:BookApp.productStockStatus(Number(fd.get('stock'))),
-            cover:data.cover || 'assets/cover/default.jpg',
+            price,
+            stock,
+            status:BookApp.productStockStatus(stock),
+            cover:data.cover || 'assets/cover/default.svg',
             rating:4.5,
             sold:0,
             desc:fd.get('desc') || 'รายละเอียดหนังสือที่เพิ่มโดยผู้ดูแลระบบ'
@@ -151,17 +211,199 @@ function bindForms(){
   const staffPhone=document.querySelector('#staffForm [name="phone"]');
   staffPhone?.addEventListener('input',()=>{staffPhone.value=staffPhone.value.replace(/\D/g,'').slice(0,10);});
 }
-function drawCharts(){
-  const orders=BookApp.orders()||[];
-  drawBar(document.getElementById('salesChart'), 'สถานะคำสั่งซื้อ', [orders.filter(o=>o.paymentStatus==='pending').length, orders.filter(o=>o.orderStatus==='packing').length, orders.filter(o=>o.deliveryStatus==='in_transit').length, orders.filter(o=>o.orderStatus==='completed').length], ['รอตรวจ','จัดเตรียม','จัดส่ง','สำเร็จ'], ['#f59e0b','#4f8ef7','#22c55e','#8b5cf6']);
-  const cat={}; orders.filter(o=>o.paymentStatus==='approved').forEach(o=>o.items?.forEach(i=>{ const p=BookApp.findProduct(i.id); const c=p?.category||'อื่น ๆ'; cat[c]=(cat[c]||0)+i.qty; }));
-  const catLabels=Object.keys(cat).length?Object.keys(cat):['ยังไม่มี'];
-  const catValues=Object.values(cat).length?Object.values(cat):[0];
+function chartDateParts(value){
+  const date=value instanceof Date?value:new Date(value);
+  if(!Number.isFinite(date.getTime())) return null;
+  const values={};
+  CHART_DATE_PARTS_FORMATTER.formatToParts(date).forEach(part=>{
+    if(part.type==='year'||part.type==='month'||part.type==='day') values[part.type]=part.value;
+  });
+  return values.year&&values.month&&values.day?values:null;
+}
+function chartPeriodDefaults(){
+  const current=chartDateParts(new Date());
+  return {
+    day:`${current.year}-${current.month}-${current.day}`,
+    month:`${current.year}-${current.month}`,
+    year:current.year
+  };
+}
+function isValidChartPeriodValue(mode,value){
+  const text=String(value||'').trim();
+  const defaults=chartPeriodDefaults();
+  if(mode==='all') return true;
+  if(mode==='year') return /^\d{4}$/.test(text)&&Number(text)>=2000&&Number(text)<=Number(defaults.year);
+  if(mode==='month'){
+    const match=text.match(/^(\d{4})-(\d{2})$/);
+    return Boolean(match&&Number(match[1])>=2000&&Number(match[2])>=1&&Number(match[2])<=12&&text<=defaults.month);
+  }
+  if(mode==='day'){
+    const match=text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if(!match) return false;
+    const year=Number(match[1]),month=Number(match[2]),day=Number(match[3]);
+    const parsed=new Date(Date.UTC(year,month-1,day));
+    return year>=2000&&text<=defaults.day&&parsed.getUTCFullYear()===year&&parsed.getUTCMonth()===month-1&&parsed.getUTCDate()===day;
+  }
+  return false;
+}
+function configureChartPeriodInput(key,mode){
+  const input=document.querySelector(`[data-chart-period-value="${key}"]`);
+  const state=chartFilterState[key];
+  if(!input||!state) return;
+  state.mode=['all','day','month','year'].includes(mode)?mode:'all';
+  input.hidden=state.mode==='all';
+  input.disabled=state.mode==='all';
+  input.closest('.chart-filter-controls')?.classList.toggle('no-period-value',state.mode==='all');
+  input.removeAttribute('min');
+  input.removeAttribute('max');
+  input.removeAttribute('step');
+  input.removeAttribute('placeholder');
+  input.removeAttribute('title');
+  if(state.mode==='all') return;
+  const defaults=chartPeriodDefaults();
+  input.type=state.mode==='year'?'number':state.mode==='day'?'date':'month';
+  if(state.mode==='year'){
+    input.min='2000';
+    input.max=defaults.year;
+    input.step='1';
+    input.placeholder='ค.ศ.';
+    input.title='กรอกปี ค.ศ.';
+  }else{
+    input.max=defaults[state.mode];
+  }
+  input.value=state[state.mode]||defaults[state.mode];
+  input.setAttribute('aria-label',`เลือก${state.mode==='day'?'วัน':state.mode==='month'?'เดือน':'ปี ค.ศ.'}ของกราฟ${CHART_FILTER_META[key].title}`);
+}
+function initializeChartFilters(){
+  const defaults=chartPeriodDefaults();
+  CHART_FILTER_KEYS.forEach(key=>{
+    const select=document.querySelector(`[data-chart-period="${key}"]`);
+    const input=document.querySelector(`[data-chart-period-value="${key}"]`);
+    if(!select||!input) return;
+    chartFilterState[key]={mode:select.value||'all',...defaults};
+    select.setAttribute('aria-controls',CHART_FILTER_META[key].canvasId);
+    input.setAttribute('aria-controls',CHART_FILTER_META[key].canvasId);
+    configureChartPeriodInput(key,chartFilterState[key].mode);
+    select.addEventListener('change',()=>{
+      configureChartPeriodInput(key,select.value);
+      drawCharts(true);
+    });
+    input.addEventListener('change',()=>{
+      const state=chartFilterState[key];
+      const value=String(input.value||'').trim();
+      if(!isValidChartPeriodValue(state.mode,value)){
+        input.value=state[state.mode]||chartPeriodDefaults()[state.mode];
+        BookApp.toast('กรุณาเลือกช่วงเวลาให้ถูกต้อง');
+        return;
+      }
+      state[state.mode]=value;
+      drawCharts(true);
+    });
+  });
+}
+function getChartFilter(key){
+  const state=chartFilterState[key];
+  if(!state) return {mode:'all',value:''};
+  return {mode:state.mode,value:state.mode==='all'?'':state[state.mode]};
+}
+function filterOrdersByPeriod(orders,filter){
+  const list=Array.isArray(orders)?orders:[];
+  if(!filter||filter.mode==='all') return list;
+  if(!isValidChartPeriodValue(filter.mode,filter.value)) return [];
+  return list.filter(order=>{
+    const parts=chartDateParts(order?.createdAt);
+    if(!parts) return false;
+    const key=filter.mode==='day'
+      ?`${parts.year}-${parts.month}-${parts.day}`
+      :filter.mode==='month'
+        ?`${parts.year}-${parts.month}`
+        :parts.year;
+    return key===String(filter.value);
+  });
+}
+function chartPeriodLabel(filter){
+  if(!filter||filter.mode==='all') return 'ข้อมูลทั้งหมด';
+  const values=String(filter.value).split('-').map(Number);
+  const year=values[0],month=values[1]||1,day=values[2]||1;
+  const date=new Date(Date.UTC(year,month-1,day,12));
+  const options=filter.mode==='day'
+    ?{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}
+    :filter.mode==='month'
+      ?{month:'long',year:'numeric',timeZone:'UTC'}
+      :{year:'numeric',timeZone:'UTC'};
+  return new Intl.DateTimeFormat('th-TH-u-ca-gregory-nu-latn',options).format(date);
+}
+function updateChartSummary(key,filter,count,noun='คำสั่งซื้อ'){
+  const meta=CHART_FILTER_META[key];
+  const subtitle=document.getElementById(meta.subtitleId);
+  if(!subtitle) return;
+  subtitle.setAttribute('aria-live','polite');
+  subtitle.textContent=`วันที่สร้าง: ${chartPeriodLabel(filter)} · ${count} ${noun}`;
+}
+function updateChartAriaLabel(key,filter,labels,values){
+  const canvas=document.getElementById(CHART_FILTER_META[key].canvasId);
+  if(!canvas) return;
+  const details=labels.map((label,index)=>`${label} ${values[index]||0}`).join(', ');
+  canvas.setAttribute('aria-label',`${CHART_FILTER_META[key].title} ${chartPeriodLabel(filter)}: ${details}`);
+}
+function bindChartResize(){
+  if(chartResizeBound) return;
+  chartResizeBound=true;
+  window.addEventListener('resize',()=>{
+    window.clearTimeout(chartResizeTimer);
+    chartResizeTimer=window.setTimeout(()=>drawCharts(true),160);
+  });
+}
+function drawCharts(useCachedData=false){
+  if(!useCachedData||!chartDataCache){
+    chartDataCache={
+      orders:BookApp.orders()||[],
+      products:BookApp.products()||[]
+    };
+  }
+  const {orders,products}=chartDataCache;
+
+  const orderStatusFilter=getChartFilter('orderStatus');
+  const orderStatusOrders=filterOrdersByPeriod(orders,orderStatusFilter);
+  const orderStatusLabels=['รอตรวจ','จัดเตรียม','จัดส่ง','สำเร็จ','ยกเลิก'];
+  const orderStatusValues=[
+    orderStatusOrders.filter(o=>o.paymentStatus==='pending').length,
+    orderStatusOrders.filter(o=>o.orderStatus==='packing').length,
+    orderStatusOrders.filter(o=>o.deliveryStatus==='in_transit').length,
+    orderStatusOrders.filter(o=>o.orderStatus==='completed').length,
+    orderStatusOrders.filter(o=>o.orderStatus==='cancelled').length
+  ];
+  updateChartSummary('orderStatus',orderStatusFilter,orderStatusValues.reduce((sum,value)=>sum+value,0));
+  updateChartAriaLabel('orderStatus',orderStatusFilter,orderStatusLabels,orderStatusValues);
+  drawBar(document.getElementById('salesChart'),'สถานะคำสั่งซื้อ',orderStatusValues,orderStatusLabels,['#f59e0b','#4f8ef7','#22c55e','#8b5cf6','#ef4444']);
+
+  const categoryFilter=getChartFilter('category');
+  const categoryOrders=filterOrdersByPeriod(orders,categoryFilter).filter(o=>o.paymentStatus==='approved');
+  const productById=new Map(products.map(product=>[String(product.id),product]));
+  const categoryCounts=new Map();
+  categoryOrders.forEach(o=>o.items?.forEach(i=>{
+    const p=productById.get(String(i.id));
+    const c=p?.category||'อื่น ๆ';
+    categoryCounts.set(c,(categoryCounts.get(c)||0)+(Number(i.qty)||0));
+  }));
+  const catLabels=categoryCounts.size?[...categoryCounts.keys()]:['ยังไม่มี'];
+  const catValues=categoryCounts.size?[...categoryCounts.values()]:[0];
+  updateChartSummary('category',categoryFilter,catValues.reduce((sum,value)=>sum+value,0),'เล่มที่ชำระแล้ว');
+  updateChartAriaLabel('category',categoryFilter,catLabels,catValues);
   drawBar(document.getElementById('categoryChart'),'หมวดหมู่ขายได้',catValues,catLabels,['#ff7f50','#4f8ef7','#34d399','#f59e0b','#a78bfa','#14b8a6','#ef4444']);
-  const shippingSummary=countsBy(orders,getShippingType);
+
+  const deliveryFilter=getChartFilter('delivery');
+  const deliveryOrders=filterOrdersByPeriod(orders,deliveryFilter);
+  const shippingSummary=countsBy(deliveryOrders,getShippingType);
   const shippingLabels=['ด่วน','ธรรมดา'];
   const shippingValues=[shippingSummary.express||0,shippingSummary.standard||0];
-  drawPie(document.getElementById('deliveryChart'),'ประเภทการจัดส่ง',shippingLabels,shippingValues,['#ff5722','#3b82f6']);
+  if(shippingSummary.unknown){
+    shippingLabels.push('อื่น ๆ');
+    shippingValues.push(shippingSummary.unknown);
+  }
+  updateChartSummary('delivery',deliveryFilter,shippingValues.reduce((sum,value)=>sum+value,0));
+  updateChartAriaLabel('delivery',deliveryFilter,shippingLabels,shippingValues);
+  drawPie(document.getElementById('deliveryChart'),'ประเภทการจัดส่ง',shippingLabels,shippingValues,['#ff5722','#3b82f6','#94a3b8']);
 }
 function countsBy(items, keyFn){
   return items.reduce((acc,item)=>{ const key=keyFn(item); acc[key]=(acc[key]||0)+1; return acc; },{});
@@ -211,9 +453,20 @@ function canvasLabelLines(ctx,label,maxWidth,maxLines=2){
   }
   return lines;
 }
-function drawBar(canvas,_title,values,labels,colors){
+function prepareChartCanvas(canvas,minHeight,ratio){
+  const cssWidth=Math.max(1,Math.round(canvas.clientWidth||canvas.getBoundingClientRect().width||Number(canvas.getAttribute('width'))||560));
+  const cssHeight=Math.max(minHeight,Math.round(cssWidth*ratio));
+  const pixelRatio=Math.min(Math.max(Number(window.devicePixelRatio)||1,1),2);
+  canvas.style.height=`${cssHeight}px`;
+  canvas.width=Math.round(cssWidth*pixelRatio);
+  canvas.height=Math.round(cssHeight*pixelRatio);
   const ctx=canvas.getContext('2d');
-  const w=canvas.width,h=canvas.height;
+  ctx.setTransform(pixelRatio,0,0,pixelRatio,0,0);
+  return {ctx,w:cssWidth,h:cssHeight};
+}
+function drawBar(canvas,_title,values,labels,colors){
+  canvas.style.minWidth=`${Math.max(320,78+values.length*68)}px`;
+  const {ctx,w,h}=prepareChartCanvas(canvas,260,.54);
   const padding={top:30,right:24,bottom:74,left:54};
   const chartW=w-padding.left-padding.right;
   const chartH=h-padding.top-padding.bottom;
@@ -257,8 +510,7 @@ function drawBar(canvas,_title,values,labels,colors){
   });
 }
 function drawPie(canvas,_title,labels,values,colors){
-  const ctx=canvas.getContext('2d');
-  const w=canvas.width,h=canvas.height;
+  const {ctx,w,h}=prepareChartCanvas(canvas,300,.46);
   const radius=Math.min(w,h)/3.05;
   const centerX=w/2;
   const centerY=h/2;

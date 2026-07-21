@@ -12,6 +12,8 @@
     selectedShipping: 'bookStore_selectedShipping_v2',
     token: 'bookStore_authToken_v2'
   };
+  const DEFAULT_COVER = 'assets/cover/default.svg';
+  const ordersMemoryCache = new Map();
 
   // Use the same host/IP that served the frontend. Devices on the LAN must
   // call this computer's API instead of resolving `localhost` to themselves.
@@ -124,7 +126,7 @@
     product: { available: 'พร้อมขาย', reserved: 'จองสินค้า', sold: 'ขายแล้ว' }
   };
   const statusTone = {
-    pending: 'yellow', approved: 'green', rejected: 'red', pending_review: 'yellow', packing: 'blue', shipped: 'blue', completed: 'green', cancelled: 'red', not_shipped: 'gray', in_transit: 'blue', delivered: 'green', available: 'green', reserved: 'yellow', sold: 'red'
+    pending: 'yellow', approved: 'green', rejected: 'red', pending_review: 'yellow', packing: 'green', shipped: 'green', completed: 'green', cancelled: 'red', not_shipped: 'gray', in_transit: 'green', delivered: 'green', available: 'green', reserved: 'yellow', sold: 'red'
   };
 
   function read(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch (e) { return fallback; } }
@@ -137,10 +139,23 @@
     return safeUser;
   }
   function sanitizeUsers(items) { return Array.isArray(items) ? items.map(sanitizeUser) : []; }
+  function removeLocalStorageByPrefix(prefix) {
+    const keys = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (key === prefix || key?.startsWith(`${prefix}_`)) keys.push(key);
+    }
+    keys.forEach(key => localStorage.removeItem(key));
+  }
   function purgeLegacySensitiveStorage() {
     localStorage.removeItem(STORAGE.current);
-    localStorage.removeItem(STORAGE.orders);
+    // Older builds stored complete order objects (including payment proofs)
+    // under both the base key and user-scoped variants. Orders now live only
+    // in memory, so remove every persistent legacy key on startup.
+    removeLocalStorageByPrefix(STORAGE.orders);
     localStorage.removeItem(STORAGE.staff);
+    localStorage.removeItem(STORAGE.checkoutDraft);
+    localStorage.removeItem(STORAGE.selectedShipping);
     if (localStorage.getItem(STORAGE.users)) write(STORAGE.users, sanitizeUsers(read(STORAGE.users, [])));
     const sessionUser = readSession(STORAGE.current, null);
     if (sessionUser) writeSession(STORAGE.current, sanitizeUser(sessionUser));
@@ -232,6 +247,8 @@ function initData() {
   function currentUser() { return sanitizeUser(readSession(STORAGE.current, null)); }
 function setCurrentUser(user, token) {
   if (!user) {
+    clearCheckoutDraft();
+    ordersMemoryCache.clear();
     sessionStorage.removeItem(STORAGE.current);
     sessionStorage.removeItem(STORAGE.token);
     localStorage.removeItem(STORAGE.current);
@@ -255,24 +272,48 @@ function setCurrentUser(user, token) {
 function saveCart(items) { write(scopedKey(STORAGE.cart), items); renderNav(); }
 function favorites() {
     const user = currentUser();
-    const cached = read(scopedKey(STORAGE.fav), []);
+    const cached = read(scopedKey(STORAGE.fav), []).map(id => String(id));
     if (!user) return cached;
     const response = apiGetSync(`/favorites/${user.id}`);
-    const items = response?.ok ? response.items.map(item => item.productId) : cached;
+    const items = response?.ok ? response.items.map(item => String(item.productId)) : cached;
     if (response?.ok) write(scopedKey(STORAGE.fav), items);
     return items;
 }
-function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(); }  function orders() {
+function saveFavorites(items) {
+    write(scopedKey(STORAGE.fav), [...new Set(items.map(id => String(id)))]);
+    renderNav();
+  }  function orders() {
     const user = currentUser();
     const cacheKey = scopedKey(STORAGE.orders);
-    const cached = read(cacheKey, []);
+    const cached = ordersMemoryCache.get(cacheKey) || [];
     if (!user) return cached;
     const response = apiGetSync(user.role === 'admin' || user.role === 'staff' ? '/orders/all' : `/orders/${user.id}`);
     const items = response?.ok ? response.items : cached;
-    if (response?.ok) write(cacheKey, items);
+    if (response?.ok) ordersMemoryCache.set(cacheKey, items);
     return items;
   }
-  function saveOrders(items) { write(scopedKey(STORAGE.orders), items); }
+  function saveOrders(items) {
+    ordersMemoryCache.set(scopedKey(STORAGE.orders), Array.isArray(items) ? items : []);
+  }
+  function getSelectedShipping() {
+    return localStorage.getItem(scopedKey(STORAGE.selectedShipping)) || '';
+  }
+  function setSelectedShipping(value) {
+    const key = scopedKey(STORAGE.selectedShipping);
+    if (value === null || value === undefined || value === '') localStorage.removeItem(key);
+    else localStorage.setItem(key, String(value));
+  }
+  function getCheckoutDraft() {
+    return read(scopedKey(STORAGE.checkoutDraft), null);
+  }
+  function setCheckoutDraft(value) {
+    const key = scopedKey(STORAGE.checkoutDraft);
+    if (value === null || value === undefined) localStorage.removeItem(key);
+    else write(key, value);
+  }
+  function clearCheckoutDraft() {
+    localStorage.removeItem(scopedKey(STORAGE.checkoutDraft));
+  }
   function addresses() {
     const user = currentUser();
     const cached = read(scopedKey(STORAGE.addresses), []);
@@ -294,7 +335,15 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     return Boolean(response?.ok);
   }
   function findProduct(id) { return products().find(p => String(p.id) === String(id)); }
-  function cartDetailed() { return cart().map(item => ({ ...item, product: findProduct(item.productId || item.id) })).filter(item => item.product); }
+  function cartDetailed() {
+    const productList = products();
+    return cart()
+      .map(item => ({
+        ...item,
+        product: productList.find(product => String(product.id) === String(item.productId || item.id))
+      }))
+      .filter(item => item.product);
+  }
   function cartTotal() { return cartDetailed().reduce((sum, item) => sum + item.product.price * item.qty, 0); }
   function productStockStatus(stock) { return stock <= 0 ? 'sold' : 'available'; }
   function availableStock(product) { return Math.max(0, (product?.stock || 0) - (product?.reserved || 0)); }
@@ -320,56 +369,80 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     if (!product) { toast('ไม่พบสินค้านี้'); return false; }
     const avail = availableStock(product);
     if (avail <= 0) { toast('สินค้าหมดแล้ว'); return false; }
+    const quantity = Number(qty);
+    if (!Number.isSafeInteger(quantity) || quantity < 1) {
+      toast('จำนวนสินค้าต้องเป็นจำนวนเต็มมากกว่า 0');
+      return false;
+    }
 
     const user = currentUser();
     const currentItems = cart();
     const nextItems = [...currentItems];
-    const found = nextItems.find(i => (i.productId || i.id) === id);
-    const nextQty = (found?.qty || 0) + qty;
-    if (nextQty > avail) { toast('จำนวนที่เลือกมากกว่าสต็อก'); return false; }
+    const normalizedId = String(id);
+    const found = nextItems.find(i => String(i.productId || i.id) === normalizedId);
+    const nextQty = Number(found?.qty || 0) + quantity;
+    if (nextQty > avail) { toast(`จำนวนสินค้าสูงสุดคือ ${avail} เล่ม`); return false; }
 
     if (user) {
-      const response = apiRequestSync('POST', `/cart/${user.id}/add`, { productId: Number(id), quantity: qty });
-      if (!response?.ok) { toast('ไม่สามารถเพิ่มลงตะกร้าได้'); return false; }
+      const response = apiRequestSync('POST', `/cart/${user.id}/add`, { productId: Number(id), quantity });
+      if (!response?.ok) { toast(response?.message || 'ไม่สามารถเพิ่มลงตะกร้าได้'); return false; }
     }
 
-    if (found) found.qty = nextQty; else nextItems.push({ id, productId: id, qty });
+    if (found) found.qty = nextQty; else nextItems.push({ id: normalizedId, productId: normalizedId, qty });
     saveCart(nextItems);
     toast('เพิ่มลงตะกร้าแล้ว');
     return true;
   }
   function changeCartQty(id, qty) {
     const product = findProduct(id);
-    const avail = product ? availableStock(product) : 1;
-    const next = Math.max(1, Math.min(Number(qty) || 1, avail || 1));
+    if (!product) { toast('ไม่พบสินค้านี้'); return false; }
+    const avail = availableStock(product);
+    if (avail <= 0) { toast('สินค้านี้ไม่มีสต็อกคงเหลือ'); return false; }
+
+    const numericQty = Number(qty);
+    if (!Number.isFinite(numericQty)) { toast('กรุณากรอกจำนวนสินค้าเป็นตัวเลข'); return false; }
+    const requested = Math.max(1, Math.trunc(numericQty));
+    const next = Math.min(requested, avail);
+    if (requested > avail) toast(`จำนวนสินค้าสูงสุดคือ ${avail} เล่ม`);
+
     const user = currentUser();
+    const currentItems = cart();
     if (user) {
       const response = apiRequestSync('PUT', `/cart/${user.id}/update`, { productId: Number(id), quantity: next });
-      if (!response?.ok) { toast('ไม่สามารถอัปเดตตะกร้าได้'); return; }
+      if (!response?.ok) { toast(response?.message || 'ไม่สามารถอัปเดตตะกร้าได้'); return false; }
     }
-    saveCart(cart().map(i => String(i.productId || i.id) === String(id) ? { ...i, productId: id, qty: next } : i));
+    saveCart(currentItems.map(i => String(i.productId || i.id) === String(id) ? { ...i, productId: String(id), qty: next } : i));
+    return true;
   }
 
   function removeCartItem(id) {
     const user = currentUser();
     if (user) {
       const response = apiRequestSync('DELETE', `/cart/${user.id}/remove/${id}`);
-      if (!response?.ok) { toast('ไม่สามารถลบสินค้าได้'); return; }
+      if (!response?.ok) { toast('ไม่สามารถลบสินค้าได้'); return false; }
     }
-    saveCart(cart().filter(i => (i.productId || i.id) !== id));
+    saveCart(cart().filter(i => String(i.productId || i.id) !== String(id)));
+    return true;
   }
   function toggleFavorite(id) {
     const user = currentUser();
-    let fav = favorites();
+    const normalizedId = String(id);
+    let fav = favorites().map(itemId => String(itemId));
+    const wasActive = fav.includes(normalizedId);
     const response = user ? apiRequestSync('POST', `/favorites/${user.id}/toggle`, { productId: Number(id) }) : null;
-    if (!user || response?.ok) {
-      if (fav.includes(id)) { fav = fav.filter(x => x !== id); toast('นำออกจากรายการโปรดแล้ว'); }
-      else { fav.push(id); toast('บันทึกรายการโปรดแล้ว'); }
-      saveFavorites(fav);
-      return fav.includes(id);
+    if (user && !response?.ok) {
+      toast('ไม่สามารถบันทึกรายการโปรดได้');
+      return wasActive;
     }
-    toast('ไม่สามารถบันทึกรายการโปรดได้');
-    return false;
+
+    const active = user && typeof response.favorited === 'boolean'
+      ? response.favorited
+      : !wasActive;
+    fav = fav.filter(itemId => itemId !== normalizedId);
+    if (active) fav.push(normalizedId);
+    toast(active ? 'บันทึกรายการโปรดแล้ว' : 'นำออกจากรายการโปรดแล้ว');
+    saveFavorites(fav);
+    return active;
   }
 
   //--------------------------------------------------------------------------------------------//
@@ -432,9 +505,9 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
       slipName, slipData, slipType
     }) : null;
     if (!response?.ok) { toast(response?.message || 'ไม่สามารถสร้างคำสั่งซื้อได้'); return null; }
-    const id = 'ORD' + new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 12);
+    const id = generateOrderId();
     const order = {
-      id: response.orderId || id,
+      id: String(response.orderId || id),
       createdAt: new Date().toISOString(),
       customerId: current?.id || 'guest',
       customerName: current?.name || 'ลูกค้า',
@@ -464,7 +537,7 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     all.unshift(order);
     saveOrders(all);
     saveCart([]);
-    localStorage.removeItem(STORAGE.checkoutDraft);
+    clearCheckoutDraft();
     return order;
   }
   function resubmitSlip(id, slipName, slipData, slipType) {
@@ -481,30 +554,31 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     return { action };
   }
   function approveOrder(id) {
-    const remote = apiRequestSync('PATCH', `/orders/${id}/status`, statusUpdatePayload('approve'));
+    const remote = apiRequestSync('PATCH', `/orders/${encodeURIComponent(id)}/status`, statusUpdatePayload('approve'));
     return remote?.ok
       ? { ok: true, message: remote.message || 'อนุมัติสลิปแล้ว' }
       : { ok: false, message: remote?.message || 'ไม่สามารถอนุมัติสลิปได้' };
   }
   function rejectOrder(id) {
-    const remote = apiRequestSync('PATCH', `/orders/${id}/status`, statusUpdatePayload('reject'));
+    const remote = apiRequestSync('PATCH', `/orders/${encodeURIComponent(id)}/status`, statusUpdatePayload('reject'));
     return remote?.ok
       ? { ok: true, message: remote.message || 'ยกเลิกคำสั่งซื้อแล้ว' }
       : { ok: false, message: remote?.message || 'ไม่สามารถยกเลิกคำสั่งซื้อได้' };
   }
   function updateOrderStage(id, stage) {
-    const remote = apiRequestSync('PATCH', `/orders/${id}/status`, statusUpdatePayload(stage === 'shipped' ? 'ship' : stage));
+    const remote = apiRequestSync('PATCH', `/orders/${encodeURIComponent(id)}/status`, statusUpdatePayload(stage === 'shipped' ? 'ship' : stage));
     return remote?.ok
       ? { ok: true, message: remote.message || (stage === 'shipped' ? 'ส่งสินค้าแล้ว' : 'อัปเดตสถานะแล้ว') }
       : { ok: false, message: remote?.message || 'ไม่สามารถอัปเดตสถานะคำสั่งซื้อได้' };
   }
   function customerReceive(id) {
-    const remote = apiRequestSync('PATCH', `/orders/${id}/status`, { action: 'receive' });
+    const remote = apiRequestSync('PATCH', `/orders/${encodeURIComponent(id)}/status`, { action: 'receive' });
     return remote?.ok
       ? { ok: true, message: remote.message || 'ยืนยันการได้รับสินค้าแล้ว' }
       : { ok: false, message: remote?.message || 'ไม่สามารถยืนยันการได้รับสินค้าได้' };
   }
   function getOrderStatusIndex(order) {
+    if (order.orderStatus === 'cancelled' || order.deliveryStatus === 'cancelled') return -1;
     if (order.orderStatus === 'completed' || order.deliveryStatus === 'delivered') return 3;
     if (order.orderStatus === 'shipped' || order.deliveryStatus === 'in_transit') return 2;
     if (order.orderStatus === 'packing') return 1;
@@ -512,7 +586,7 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
   }
 
  function bookCard(product) {
-    const fav = favorites().includes(product.id);
+    const fav = favorites().includes(String(product.id));
     const avail = availableStock(product);
     const outOfStock = avail <= 0;
     const stockBadge = outOfStock
@@ -526,7 +600,7 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
       <article class="book-card ${outOfStock ? 'is-out-of-stock' : ''}" data-id="${product.id}" data-category="${escapeHtml(product.category)}">
         <button class="icon-btn fav-btn ${fav ? 'active' : ''}" data-fav="${product.id}" title="บันทึกรายการโปรด" aria-label="บันทึกรายการโปรด">${icon(fav ? 'heartFill' : 'heart')}</button>
         <a href="book-detail.html#id=${product.id}" class="book-cover">
-          <img src="${product.coverUrl || product.cover}" alt="${escapeHtml(product.title)}" class="cover-img" onerror="this.onerror=null;this.src='assets/cover/default.jpg'">
+          <img src="${escapeHtml(product.coverUrl || product.cover || DEFAULT_COVER)}" alt="${escapeHtml(product.title)}" class="cover-img" onerror="this.onerror=null;this.src='assets/cover/default.svg'">
           ${coverStockBadge}
         </a>
         <div class="book-info">
@@ -638,7 +712,10 @@ function saveFavorites(items) { write(scopedKey(STORAGE.fav), items); renderNav(
     </div>`;
   }
 
-function bindGlobalActions(root = document) {
+let globalActionsBound = false;
+function bindGlobalActions() {
+  if (globalActionsBound) return;
+  globalActionsBound = true;
   document.addEventListener('click', (e) => {
     const cartBtn = e.target.closest('[data-cart]');
     if (cartBtn) {
@@ -672,6 +749,7 @@ function bindGlobalActions(root = document) {
     authToken, authHeaders, apiRequest,
     cart, saveCart, cartDetailed, cartTotal, addToCart, changeCartQty, removeCartItem,
     favorites, saveFavorites, toggleFavorite, orders, saveOrders, addresses, saveAddresses, createAddress, deleteAddress,
+    getSelectedShipping, setSelectedShipping, getCheckoutDraft, setCheckoutDraft, clearCheckoutDraft,
     staff, createStaff, deleteStaff, setStaffStatus, shippingOptions, makeOrder, approveOrder, rejectOrder, updateOrderStage,
     customerReceive, getOrderStatusIndex, stepHtml, statusLabel, statusBadge, timelineList,
     bookCard, toast, requireLogin, requireRole, renderNav, renderFooter, bindGlobalActions, findProduct,

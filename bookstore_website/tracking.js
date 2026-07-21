@@ -21,7 +21,7 @@ function render(){
   const user = BookApp.currentUser();
   let orders = BookApp.orders().filter(o => user.role === 'admin' || user.role === 'staff' || o.customerId === user.id || o.customerEmail === user.email);
   const target = new URLSearchParams(location.search).get('order');
-  if(target) orders = orders.filter(o=>o.id===target).concat(orders.filter(o=>o.id!==target));
+  if(target) orders = orders.filter(o=>String(o.id)===String(target)).concat(orders.filter(o=>String(o.id)!==String(target)));
   if(!orders.length){ root.innerHTML = `<div class="empty-state"><h3>ยังไม่มีคำสั่งซื้อ</h3><p>เมื่อชำระเงินและแนบสลิปแล้ว รายการจะอยู่ที่นี่</p><a href="products.html" class="btn btn-primary">เลือกซื้อหนังสือ</a></div>`; return; }
   root.innerHTML = orders.map(o=>`
     <article class="card order-card">
@@ -67,7 +67,7 @@ function render(){
     const file = input.files[0];
     if(!file) return;
     const orderId = input.dataset.reattachInput;
-    const order = BookApp.orders().find(o=>o.id===orderId);
+    const order = BookApp.orders().find(o=>String(o.id)===String(orderId));
     const attempts = order?.resubmitCount || 0;
     if(attempts === 1){
       const proceed = confirm('นี่เป็นการแนบหลักฐานครั้งสุดท้าย หากไม่ผ่านการตรวจสอบ คำสั่งซื้อนี้จะถูกยกเลิกถาวร ต้องการดำเนินการต่อหรือไม่?');

@@ -22,35 +22,66 @@ router.put('/:userId', authenticate, requireSelfOrAdmin, async (req, res) => {
 });
 
 router.post('/:userId/password', authenticate, requireSelfOrAdmin, async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
+  const { currentPassword, newPassword } = req.body || {};
 
-  if (!currentPassword || !newPassword) {
+  if (typeof currentPassword !== 'string' || !currentPassword || typeof newPassword !== 'string' || !newPassword) {
     return res.status(400).json({ ok: false, message: 'currentPassword and newPassword are required' });
   }
 
-  if (String(newPassword).length < 8) {
+  if (newPassword.length < 8) {
     return res.status(400).json({ ok: false, message: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร' });
   }
 
+  let conn;
+  let transactionOpen = false;
   try {
-    const [rows] = await pool.query('SELECT password_hash FROM users WHERE user_id = ? LIMIT 1', [req.params.userId]);
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+    transactionOpen = true;
+
+    const [rows] = await conn.query(
+      'SELECT password_hash FROM users WHERE user_id = ? LIMIT 1 FOR UPDATE',
+      [req.params.userId]
+    );
     const user = rows[0];
 
     if (!user) {
+      await conn.rollback();
+      transactionOpen = false;
       return res.status(404).json({ ok: false, message: 'User not found' });
     }
 
     const validPassword = await verifyPassword(currentPassword, user.password_hash);
     if (!validPassword) {
+      await conn.rollback();
+      transactionOpen = false;
       return res.status(401).json({ ok: false, message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
     }
 
     const passwordHash = await hashPassword(newPassword);
-    await pool.query('UPDATE users SET password_hash = ? WHERE user_id = ?', [passwordHash, req.params.userId]);
+    await conn.query('UPDATE users SET password_hash = ? WHERE user_id = ?', [passwordHash, req.params.userId]);
+    const [revokedSessions] = await conn.query(
+      `UPDATE auth_sessions
+       SET revoked_at = COALESCE(revoked_at, CURRENT_TIMESTAMP)
+       WHERE user_id = ? AND session_id <> ? AND revoked_at IS NULL`,
+      [req.params.userId, req.auth.sessionId]
+    );
 
-    res.json({ ok: true, message: 'Password changed successfully' });
+    await conn.commit();
+    transactionOpen = false;
+
+    return res.json({
+      ok: true,
+      message: 'เปลี่ยนรหัสผ่านสำเร็จ และออกจากระบบบนอุปกรณ์อื่นแล้ว',
+      otherSessionsRevoked: revokedSessions.affectedRows,
+    });
   } catch (error) {
-    res.status(500).json({ ok: false, message: 'Failed to change password', error: error.message });
+    if (transactionOpen) {
+      try { await conn.rollback(); } catch (_) { /* Preserve the original error. */ }
+    }
+    return res.status(500).json({ ok: false, message: 'Failed to change password', error: error.message });
+  } finally {
+    if (conn) conn.release();
   }
 });
 

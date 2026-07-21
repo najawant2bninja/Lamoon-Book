@@ -15,6 +15,29 @@ function validEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function parseStaffActiveStatus(body) {
+  const payload = body && typeof body === 'object' ? body : {};
+  const hasStatus = Object.prototype.hasOwnProperty.call(payload, 'status');
+  const hasIsActive = Object.prototype.hasOwnProperty.call(payload, 'isActive');
+
+  if (!hasStatus && !hasIsActive) return null;
+
+  let statusValue;
+  if (hasStatus) {
+    if (payload.status !== 'active' && payload.status !== 'inactive') return null;
+    statusValue = payload.status === 'active';
+  }
+
+  let booleanValue;
+  if (hasIsActive) {
+    if (typeof payload.isActive !== 'boolean') return null;
+    booleanValue = payload.isActive;
+  }
+
+  if (hasStatus && hasIsActive && statusValue !== booleanValue) return null;
+  return hasStatus ? statusValue : booleanValue;
+}
+
 function staffItem(row) {
   return {
     id: String(row.id),
@@ -123,7 +146,14 @@ router.delete('/staff/:id', async (req, res) => {
 });
 
 router.patch('/staff/:id/status', async (req, res) => {
-  const isActive = req.body.status === 'active' || req.body.isActive === true;
+  const isActive = parseStaffActiveStatus(req.body);
+  if (isActive === null) {
+    return res.status(400).json({
+      ok: false,
+      message: 'ค่า status ต้องเป็น "active" หรือ "inactive" หรือ isActive ต้องเป็น true หรือ false เท่านั้น',
+    });
+  }
+
   try {
     const [result] = await pool.query(`
       UPDATE users
@@ -139,20 +169,49 @@ router.patch('/staff/:id/status', async (req, res) => {
 });
 
 router.patch('/staff/:id/password', async (req, res) => {
-  const password = String(req.body.password || '');
-  if (password.length < 8) {
+  const password = req.body?.password;
+  if (typeof password !== 'string' || password.length < 8) {
     return res.status(400).json({ ok: false, message: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร' });
   }
+
+  let conn;
+  let transactionOpen = false;
   try {
     const passwordHash = await hashPassword(password);
-    const [result] = await pool.query(`
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+    transactionOpen = true;
+
+    const [result] = await conn.query(`
       UPDATE users SET password_hash = ? WHERE user_id = ? AND role = 'staff'
     `, [passwordHash, req.params.id]);
-    if (!result.affectedRows) return res.status(404).json({ ok: false, message: 'Staff not found' });
-    await pool.query('DELETE FROM auth_sessions WHERE user_id = ?', [req.params.id]);
-    res.json({ ok: true, message: 'ตั้งรหัสผ่านใหม่เรียบร้อยแล้ว' });
+    if (!result.affectedRows) {
+      await conn.rollback();
+      transactionOpen = false;
+      return res.status(404).json({ ok: false, message: 'Staff not found' });
+    }
+
+    const [revokedSessions] = await conn.query(
+      `UPDATE auth_sessions
+       SET revoked_at = COALESCE(revoked_at, CURRENT_TIMESTAMP)
+       WHERE user_id = ? AND revoked_at IS NULL`,
+      [req.params.id]
+    );
+    await conn.commit();
+    transactionOpen = false;
+
+    return res.json({
+      ok: true,
+      message: 'ตั้งรหัสผ่านใหม่และออกจากระบบทุกอุปกรณ์เรียบร้อยแล้ว',
+      sessionsRevoked: revokedSessions.affectedRows,
+    });
   } catch (error) {
-    res.status(500).json({ ok: false, message: 'Failed to reset staff password', error: error.message });
+    if (transactionOpen) {
+      try { await conn.rollback(); } catch (_) { /* Preserve the original error. */ }
+    }
+    return res.status(500).json({ ok: false, message: 'Failed to reset staff password', error: error.message });
+  } finally {
+    if (conn) conn.release();
   }
 });
 

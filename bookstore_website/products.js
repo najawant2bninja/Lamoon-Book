@@ -20,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return aOut === bOut ? 0 : aOut ? 1 : -1;
     });
     grid.innerHTML = items.length ? items.map(BookApp.bookCard).join('') : `<div class="empty-state" style="grid-column:1/-1"><div class="icon">${BookApp.icon('search')}</div><h3>ไม่พบหนังสือ</h3><p>ลองเปลี่ยนคำค้นหาหรือหมวดหมู่</p></div>`;
-    BookApp.bindGlobalActions(grid);
   }
   const inputs = [search, cat];
   if (stock) inputs.push(stock);

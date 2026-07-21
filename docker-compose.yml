@@ -47,6 +47,10 @@ services:
       CORS_ORIGIN: "*"
     ports:
       - "3000:3000"
+    volumes:
+      # Keep uploaded book covers on the host so Live Server can serve them
+      # and the files remain available after the API container is recreated.
+      - ./bookstore_website/assets/cover:/bookstore_website/assets/cover
 
 volumes:
   mysql_data:

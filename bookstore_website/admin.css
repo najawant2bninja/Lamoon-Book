@@ -23,8 +23,9 @@
 .chart-header{
   display:flex;
   justify-content:space-between;
-  align-items:center;
-  gap:8px;
+  align-items:flex-start;
+  flex-wrap:wrap;
+  gap:14px;
   margin-bottom:18px;
 }
 .chart-title{
@@ -39,11 +40,67 @@
   line-height:1.5;
   margin-top:2px;
 }
+.chart-filter-controls{
+  display:grid;
+  grid-template-columns:auto minmax(82px,.7fr) minmax(132px,1.3fr);
+  align-items:center;
+  gap:7px;
+  width:100%;
+}
+.chart-filter-controls.no-period-value{
+  grid-template-columns:auto minmax(110px,1fr);
+}
+.chart-filter-controls label{
+  color:#7d6b5e;
+  font-size:12px;
+  font-weight:700;
+  white-space:nowrap;
+}
+.chart-period-select,
+.chart-period-value{
+  width:100%;
+  min-width:0;
+  min-height:38px;
+  padding:7px 10px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#fff;
+  color:var(--brown);
+  font-family:inherit;
+  font-size:13px;
+  font-weight:600;
+  line-height:1.2;
+}
+.chart-period-select{
+  cursor:pointer;
+}
+.chart-period-value{
+  max-width:180px;
+}
+.chart-period-value[hidden]{
+  display:none;
+}
+.chart-period-select:focus-visible,
+.chart-period-value:focus-visible{
+  outline:2px solid var(--orange);
+  outline-offset:2px;
+  border-color:transparent;
+}
+.chart-canvas-scroll{
+  width:100%;
+  overflow-x:auto;
+  overscroll-behavior-inline:contain;
+  scrollbar-width:thin;
+}
 .chart-grid canvas{
   width:100%;
+  min-width:320px;
   height:auto;
   display:block;
   border-radius:12px;
+}
+.chart-card-wide canvas{
+  min-width:360px;
 }
 .chart-legend{
   display:grid;
@@ -167,4 +224,44 @@
   .admin-layout,.chart-grid{grid-template-columns:1fr}
   .chart-card-wide{grid-column:auto}
   .chart-legend{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+  .chart-header{
+    flex-direction:column;
+  }
+  .chart-filter-controls{
+    width:100%;
+    grid-template-columns:auto minmax(76px,.7fr) minmax(120px,1fr);
+  }
+  .chart-period-select,
+  .chart-period-value{
+    width:100%;
+    max-width:none;
+  }
+}
+@media(max-width:480px){
+  .chart-card{
+    padding:15px;
+  }
+  .chart-filter-controls,
+  .chart-filter-controls.no-period-value{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  }
+  .chart-filter-controls label{
+    grid-column:1/-1;
+  }
+  .chart-filter-controls.no-period-value .chart-period-select{
+    grid-column:1/-1;
+  }
+}
+@media(max-width:400px){
+  .chart-filter-controls,
+  .chart-filter-controls.no-period-value{
+    grid-template-columns:minmax(0,1fr);
+  }
+  .chart-filter-controls label,
+  .chart-filter-controls .chart-period-select,
+  .chart-filter-controls .chart-period-value{
+    grid-column:1;
+  }
 }

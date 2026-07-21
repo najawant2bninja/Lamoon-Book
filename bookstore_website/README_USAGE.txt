@@ -1,34 +1,39 @@
-WarmRead Store - Front-end Demo
+Lamoon Book - คู่มือเปิดระบบและทดสอบ
 
-วิธีเปิดใช้งาน
-1. แตกไฟล์ ZIP
-2. เปิด index.html ด้วยเว็บเบราว์เซอร์
-3. ระบบใช้ Local Storage จำลองฐานข้อมูล จึงทดลองสั่งซื้อ/ชำระเงิน/อัปเดตสถานะได้ทันที
+ส่วนประกอบของระบบ
+- Frontend: HTML/CSS/JavaScript ในโฟลเดอร์ bookstore_website
+- Backend: Node.js/Express ที่พอร์ต 3000
+- Database: MySQL 8 ผ่าน Docker Compose
+- รูปปกที่อัปโหลด: bookstore_website/assets/cover
 
-บัญชีทดลอง
-- ลูกค้า: customer@example.com / 123456
-- พนักงาน: staff@example.com / 123456
-- แอดมิน: admin@example.com / 123456
+เปิดระบบบนเครื่อง Server
+1. เปิด Terminal ที่โฟลเดอร์หลักของโปรเจกต์
+2. รัน: docker compose up -d --build
+3. เปิดโฟลเดอร์โปรเจกต์ด้วย Live Server โดยตั้ง Host เป็น 0.0.0.0 และ Port เป็น 5501
+4. เปิดหน้าเว็บ:
+   http://localhost:5501/bookstore_website/index.html
+5. ตรวจ Backend และ Database:
+   http://localhost:3000/api/health
+   ต้องได้ ok=true และ db=true
 
-หน้าที่สำคัญ
-- index.html: หน้าหลัก
-- products.html: รายการหนังสือ ค้นหา และกรอง
-- book-detail.html: รายละเอียดหนังสือ
+เปิดจากเครื่องอื่นในวง LAN
+- หา IPv4 ของเครื่อง Server ด้วยคำสั่ง ipconfig
+- เปิด http://<SERVER-IP>:5501/bookstore_website/index.html
+- Frontend จะเรียก API ที่ http://<SERVER-IP>:3000/api อัตโนมัติ จึงไม่ต้องแก้ไฟล์เมื่อเปลี่ยนเครื่อง Server
+- อนุญาตพอร์ต 5501 และ 3000 ใน Windows Firewall หากเครื่องอื่นเข้าไม่ได้
+
+หมายเหตุสำคัญ
+- ห้ามเปิดด้วย file:// หากต้องการทดสอบการบันทึกฐานข้อมูลครบทุกขั้นตอน
+- ข้อมูลผู้ใช้ ตะกร้า รายการโปรด ออเดอร์ พนักงาน และสินค้าเก็บใน MySQL จริง
+- หากย้ายเครื่องด้วย Git ต้อง add/commit ไฟล์ปกที่อัปโหลดด้วย หรือสำรองโฟลเดอร์ assets/cover แยกต่างหาก
+- GitHub Pages เพียงอย่างเดียวไม่สามารถรัน Node.js/MySQL ของระบบนี้ได้ ต้องมี Backend ที่เข้าถึงได้ผ่านเครือข่ายด้วย
+
+หน้าหลักสำหรับทดสอบ
+- index.html: หน้าแรกและค้นหาหนังสือ
+- products.html: รายการหนังสือและตัวกรอง
 - favorites.html: รายการโปรด
-- cart.html: ตะกร้าสินค้า
-- checkout.html: ที่อยู่จัดส่งและขนส่ง
-- payment.html: ชำระเงินและแนบสลิป
-- tracking.html: ติดตามคำสั่งซื้อ
-- staff.html: ตรวจสลิป จัดเตรียม และอัปเดตจัดส่ง
-- admin.html: Dashboard สินค้า สต็อก พนักงาน และรายงาน
-
-ลำดับสถานะที่ปรับใหม่
-1. ลูกค้าแนบสลิป: paymentStatus = pending, orderStatus = pending_review, product = reserved
-2. พนักงานอนุมัติ: paymentStatus = approved, orderStatus = packing, ระบบตัดสต็อกครั้งเดียว
-3. พนักงานส่งสินค้า: orderStatus = shipped, deliveryStatus = in_transit
-4. ลูกค้ายืนยันรับสินค้า: orderStatus = completed, deliveryStatus = delivered
-5. ถ้าสลิปไม่ผ่าน: paymentStatus = rejected, orderStatus = cancelled, คืนสถานะสินค้า
-
-หมายเหตุ
-- เวอร์ชันนี้เปลี่ยน Storage key เป็น v2 เพื่อให้ข้อมูลเดิมจากเวอร์ชันก่อนหน้าไม่ปนกัน
-- ไม่มี Backend จริง จึงเหมาะสำหรับส่งงาน Front-end / Demo ตาม Scope
+- cart.html: ตะกร้าและจำนวนสินค้า
+- checkout.html / payment.html: ที่อยู่ การจัดส่ง และชำระเงิน
+- tracking.html: ประวัติและสถานะคำสั่งซื้อ
+- staff.html: ตรวจชำระเงินและจัดส่ง
+- admin.html: สินค้า พนักงาน และรายงาน

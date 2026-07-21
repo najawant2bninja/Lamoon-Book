@@ -27,28 +27,64 @@
                   <div class="chart-header">
                     <div>
                       <div class="chart-title">สถานะคำสั่งซื้อ</div>
-                      <div class="chart-subtitle">ภาพรวมความคืบหน้า</div>
+                      <div class="chart-subtitle" id="orderStatusChartSubtitle">ภาพรวมความคืบหน้า</div>
+                    </div>
+                    <div class="chart-filter-controls">
+                      <label for="orderStatusPeriod">กรองตาม</label>
+                      <select id="orderStatusPeriod" class="chart-period-select" data-chart-period="orderStatus" aria-label="ช่วงเวลาของกราฟสถานะคำสั่งซื้อ">
+                        <option value="all" selected>ทั้งหมด</option>
+                        <option value="day">วัน</option>
+                        <option value="month">เดือน</option>
+                        <option value="year">ปี (ค.ศ.)</option>
+                      </select>
+                      <input id="orderStatusPeriodValue" class="chart-period-value" data-chart-period-value="orderStatus" type="month" aria-label="เลือกเดือนของกราฟสถานะคำสั่งซื้อ" hidden />
                     </div>
                   </div>
-                  <canvas id="salesChart" width="560" height="300"></canvas>
+                  <div class="chart-canvas-scroll">
+                    <canvas id="salesChart" width="560" height="300" role="img" aria-label="กราฟสถานะคำสั่งซื้อ">กราฟสถานะคำสั่งซื้อ</canvas>
+                  </div>
                 </div>
                 <div class="chart-card">
                   <div class="chart-header">
                     <div>
                       <div class="chart-title">หมวดหมู่ขายได้</div>
-                      <div class="chart-subtitle">สินค้าที่มียอดขายสูง</div>
+                      <div class="chart-subtitle" id="categoryChartSubtitle">สินค้าที่มียอดขายสูง</div>
+                    </div>
+                    <div class="chart-filter-controls">
+                      <label for="categoryPeriod">กรองตาม</label>
+                      <select id="categoryPeriod" class="chart-period-select" data-chart-period="category" aria-label="ช่วงเวลาของกราฟหมวดหมู่ขายได้">
+                        <option value="all" selected>ทั้งหมด</option>
+                        <option value="day">วัน</option>
+                        <option value="month">เดือน</option>
+                        <option value="year">ปี (ค.ศ.)</option>
+                      </select>
+                      <input id="categoryPeriodValue" class="chart-period-value" data-chart-period-value="category" type="month" aria-label="เลือกเดือนของกราฟหมวดหมู่ขายได้" hidden />
                     </div>
                   </div>
-                  <canvas id="categoryChart" width="560" height="300"></canvas>
+                  <div class="chart-canvas-scroll">
+                    <canvas id="categoryChart" width="560" height="300" role="img" aria-label="กราฟหมวดหมู่ขายได้">กราฟหมวดหมู่ขายได้</canvas>
+                  </div>
                 </div>
                 <div class="chart-card chart-card-wide">
                   <div class="chart-header">
                     <div>
                       <div class="chart-title">ประเภทการจัดส่ง</div>
-                      <div class="chart-subtitle">ข้อมูลตามสถานะส่งสินค้า</div>
+                      <div class="chart-subtitle" id="deliveryChartSubtitle">ข้อมูลตามสถานะส่งสินค้า</div>
+                    </div>
+                    <div class="chart-filter-controls">
+                      <label for="deliveryPeriod">กรองตาม</label>
+                      <select id="deliveryPeriod" class="chart-period-select" data-chart-period="delivery" aria-label="ช่วงเวลาของกราฟประเภทการจัดส่ง">
+                        <option value="all" selected>ทั้งหมด</option>
+                        <option value="day">วัน</option>
+                        <option value="month">เดือน</option>
+                        <option value="year">ปี (ค.ศ.)</option>
+                      </select>
+                      <input id="deliveryPeriodValue" class="chart-period-value" data-chart-period-value="delivery" type="month" aria-label="เลือกเดือนของกราฟประเภทการจัดส่ง" hidden />
                     </div>
                   </div>
-                  <canvas id="deliveryChart" width="720" height="320"></canvas>
+                  <div class="chart-canvas-scroll">
+                    <canvas id="deliveryChart" width="720" height="320" role="img" aria-label="กราฟประเภทการจัดส่ง">กราฟประเภทการจัดส่ง</canvas>
+                  </div>
                   <div id="deliveryLegend" class="chart-legend"></div>
                 </div>
               </div>
@@ -90,12 +126,18 @@
                     class="input"
                     name="price"
                     type="number"
+                    inputmode="decimal"
+                    min="0.01"
+                    step="0.01"
                     placeholder="ราคา"
                     required
                   /><input
                     class="input"
                     name="stock"
                     type="number"
+                    inputmode="numeric"
+                    min="0"
+                    step="1"
                     placeholder="สต็อก"
                     required
                   />
@@ -114,7 +156,7 @@
                           class="input"
                           name="coverFile"
                           type="file"
-                          accept="image/*"
+                          accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
                         />
                       </label>
                     </div>

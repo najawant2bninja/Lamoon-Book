@@ -64,7 +64,7 @@ function runStaffAction(button,filter,action){
 }
 
 function openSlipModal(orderId){
-  const order = BookApp.orders().find(o=>o.id===orderId);
+  const order = BookApp.orders().find(o=>String(o.id)===String(orderId));
   if(!order || !order.slipData){ BookApp.toast('รายการนี้ไม่มีรูปสลิป'); return; }
   document.querySelector('.modal-backdrop')?.remove();
   const modal = document.createElement('div');

@@ -400,7 +400,7 @@ Node.js
 
 ### Database
 
-Local Storage
+MySQL 8 (ข้อมูลหลัก) และ Browser Storage เฉพาะสถานะหน้าจอชั่วคราว
 
 ### Design Tool
 
@@ -416,7 +416,7 @@ Markdown
 
 ### Deployment
 
-GitHub Pages
+Docker Compose สำหรับ API/Database และ Live Server สำหรับ Frontend ในสภาพแวดล้อมพัฒนา
 
 ## Wireframe
 

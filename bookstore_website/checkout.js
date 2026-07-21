@@ -5,8 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
   let selectedAddress = BookApp.addresses()[0]?.id;
-  let selectedShipping =
-    localStorage.getItem(BookApp.STORAGE.selectedShipping) || "standard";
+  let selectedShipping = BookApp.getSelectedShipping();
   const main = document.getElementById("checkoutMain");
   const summary = document.getElementById("checkoutSummary");
   const cartBookCount = () =>
@@ -96,8 +95,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const bookCount = cartBookCount();
     const shippingOptions = BookApp.shippingOptions(bookCount);
     if (!shippingOptions.some((s) => s.id === selectedShipping))
-      selectedShipping = "standard";
-    localStorage.setItem(BookApp.STORAGE.selectedShipping, selectedShipping);
+      selectedShipping = shippingOptions[0]?.id || "";
+    BookApp.setSelectedShipping(selectedShipping);
     
     main.innerHTML = `
       <section class="card">
@@ -172,7 +171,7 @@ document.addEventListener("DOMContentLoaded", () => {
         address,
         shippingMethod: ship,
       };
-      localStorage.setItem(BookApp.STORAGE.checkoutDraft, JSON.stringify(checkoutDraft));
+      BookApp.setCheckoutDraft(checkoutDraft);
       location.href = "payment.html";
     };
   }
