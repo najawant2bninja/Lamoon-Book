@@ -30,9 +30,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const addrSection = document.getElementById('addressList')?.closest('.card');
   const layout = document.querySelector('.profile-layout');
-  if (user.role === 'staff') {
+  const doesNotUseShippingAddress = user.role === 'admin' || user.role === 'staff';
+  if (doesNotUseShippingAddress) {
     if (addrSection) addrSection.style.display = 'none';
     layout?.classList.add('is-single');
+    const subtitle = document.getElementById('profileSubtitle');
+    if (subtitle) subtitle.textContent = 'จัดการข้อมูลบัญชีและรหัสผ่าน';
   } else {
     renderAddr();
   }

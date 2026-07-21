@@ -2,14 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('loginForm');
   const API_URL = 'http://localhost:3000/api/auth/login';
 
-  document.querySelectorAll('[data-demo]').forEach(btn => {
-    btn.onclick = () => {
-      form.email.value = btn.dataset.demo;
-      form.password.value = '123456';
-      document.querySelectorAll('[data-demo]').forEach(item => item.classList.toggle('active', item === btn));
-    };
-  });
-
   form.addEventListener('submit', async e=>{
     e.preventDefault();
 

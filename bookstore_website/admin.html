@@ -23,8 +23,34 @@
             <section class="card">
               <h3>กราฟสรุปผล</h3>
               <div class="chart-grid">
-                <canvas id="salesChart" width="420" height="250"></canvas
-                ><canvas id="categoryChart" width="420" height="250"></canvas>
+                <div class="chart-card">
+                  <div class="chart-header">
+                    <div>
+                      <div class="chart-title">สถานะคำสั่งซื้อ</div>
+                      <div class="chart-subtitle">ภาพรวมความคืบหน้า</div>
+                    </div>
+                  </div>
+                  <canvas id="salesChart" width="560" height="300"></canvas>
+                </div>
+                <div class="chart-card">
+                  <div class="chart-header">
+                    <div>
+                      <div class="chart-title">หมวดหมู่ขายได้</div>
+                      <div class="chart-subtitle">สินค้าที่มียอดขายสูง</div>
+                    </div>
+                  </div>
+                  <canvas id="categoryChart" width="560" height="300"></canvas>
+                </div>
+                <div class="chart-card chart-card-wide">
+                  <div class="chart-header">
+                    <div>
+                      <div class="chart-title">ประเภทการจัดส่ง</div>
+                      <div class="chart-subtitle">ข้อมูลตามสถานะส่งสินค้า</div>
+                    </div>
+                  </div>
+                  <canvas id="deliveryChart" width="720" height="320"></canvas>
+                  <div id="deliveryLegend" class="chart-legend"></div>
+                </div>
               </div>
             </section>
             <section class="card">

@@ -19,16 +19,21 @@ async function orderList(where = '', params = []) {
   const marks = ids.map(() => '?').join(',');
   const [items] = await pool.query(`SELECT oi.order_id, oi.book_id AS id, oi.quantity AS qty, oi.price_at_order AS price, b.title
     FROM order_items oi JOIN books b ON b.book_id = oi.book_id WHERE oi.order_id IN (${marks})`, ids);
-  return orders.map(order => ({
-    ...order, id: String(order.id), customerId: String(order.customerId),
-    customerName: order.customerName || 'ลูกค้า', items: items.filter(item => item.order_id === Number(order.id)),
-    shipping: 0, address: { receiver: order.receiver, phone: order.addressPhone, detail: order.addressDetail },
-    shippingMethod: { id: String(order.shippingMethodId), name: order.shippingMethodName },
-    orderStatus: order.orderStatus === 'paid' ? 'packing' : order.orderStatus === 'shipping' ? 'shipped' : order.orderStatus,
-    paymentStatus: order.paymentStatus === 'success' ? 'approved' : order.paymentStatus === 'failed' ? 'rejected' : 'pending',
-    deliveryStatus: order.orderStatus === 'shipping' ? 'in_transit' : order.orderStatus === 'completed' ? 'delivered' : order.orderStatus === 'cancelled' ? 'cancelled' : 'not_shipped',
-    slipName: order.slipName || 'payment-slip', staffName: '-'
-  }));
+  return orders.map(order => {
+    const orderItems = items.filter(item => item.order_id === Number(order.id));
+    const subtotal = orderItems.reduce((sum, item) => sum + Number(item.price) * Number(item.qty), 0);
+    const total = Number(order.total);
+    return {
+      ...order, id: String(order.id), customerId: String(order.customerId), total, subtotal,
+      customerName: order.customerName || 'ลูกค้า', items: orderItems,
+      shipping: Math.max(total - subtotal, 0), address: { receiver: order.receiver, phone: order.addressPhone, detail: order.addressDetail },
+      shippingMethod: { id: String(order.shippingMethodId), name: order.shippingMethodName },
+      orderStatus: order.orderStatus === 'paid' ? 'packing' : order.orderStatus === 'shipping' ? 'shipped' : order.orderStatus,
+      paymentStatus: order.paymentStatus === 'success' ? 'approved' : order.paymentStatus === 'failed' ? 'rejected' : 'pending',
+      deliveryStatus: order.orderStatus === 'shipping' ? 'in_transit' : order.orderStatus === 'completed' ? 'delivered' : order.orderStatus === 'cancelled' ? 'cancelled' : 'not_shipped',
+      slipName: order.slipName || 'payment-slip', staffName: '-'
+    };
+  });
 }
 
 router.get('/all', async (req, res) => { try { res.json({ ok: true, items: await orderList() }); } catch (error) { res.status(500).json({ ok: false, message: 'Failed to fetch orders', error: error.message }); } });
@@ -36,7 +41,8 @@ router.get('/:userId', async (req, res) => { try { res.json({ ok: true, items: a
 
 router.post('/create', async (req, res) => {
   const { userId, addressId, shippingMethodId, items, slipName, slipData } = req.body;
-  if (!userId || !addressId || !shippingMethodId || !Array.isArray(items) || !items.length) {
+  const itemQuantitiesAreValid = Array.isArray(items) && items.every(item => Number.isInteger(Number(item.quantity)) && Number(item.quantity) > 0);
+  if (!userId || !addressId || !shippingMethodId || !Array.isArray(items) || !items.length || !itemQuantitiesAreValid) {
     return res.status(400).json({ ok: false, message: 'Invalid order payload' });
   }
   const conn = await pool.getConnection();
@@ -45,12 +51,21 @@ router.post('/create', async (req, res) => {
     const bookIds = items.map(item => Number(item.bookId));
     const [books] = await conn.query(`SELECT book_id, price, stock_quantity FROM books WHERE book_id IN (${bookIds.map(() => '?').join(',')}) FOR UPDATE`, bookIds);
     if (books.length !== items.length) throw new Error('A product no longer exists');
-    let total = 0;
+    let subtotal = 0;
     for (const item of items) {
       const book = books.find(row => row.book_id === Number(item.bookId));
       if (!book || book.stock_quantity < Number(item.quantity)) throw new Error('Insufficient stock');
-      total += Number(book.price) * Number(item.quantity);
+      subtotal += Number(book.price) * Number(item.quantity);
     }
+    const bookCount = items.reduce((sum, item) => sum + Number(item.quantity), 0);
+    const [shippingRates] = await conn.query(`
+      SELECT price FROM shipping_rate_tiers
+      WHERE shipping_method_id = ? AND min_quantity <= ? AND (max_quantity IS NULL OR max_quantity >= ?)
+      ORDER BY min_quantity DESC LIMIT 1
+    `, [shippingMethodId, bookCount, bookCount]);
+    if (!shippingRates.length) throw new Error('Shipping rate is unavailable');
+    const shipping = Number(shippingRates[0].price);
+    const total = subtotal + shipping;
     const [order] = await conn.query(`INSERT INTO orders (user_id, address_id, shipping_method_id, total_price, order_status) VALUES (?, ?, ?, ?, 'pending')`, [userId, addressId, shippingMethodId, total]);
     for (const item of items) {
       const book = books.find(row => row.book_id === Number(item.bookId));
@@ -60,7 +75,7 @@ router.post('/create', async (req, res) => {
     if (methods.length) await conn.query(`INSERT INTO payments (order_id, payment_method_id, amount, qr_code_ref, proof_image_url, payment_status, paid_at) VALUES (?, ?, ?, ?, ?, 'awaiting_verification', NOW())`, [order.insertId, methods[0].payment_method_id, total, slipName || null, slipData || null]);
     await conn.query('DELETE ci FROM cart_items ci JOIN carts c ON c.cart_id = ci.cart_id WHERE c.user_id = ?', [userId]);
     await conn.commit();
-    res.status(201).json({ ok: true, orderId: String(order.insertId) });
+    res.status(201).json({ ok: true, orderId: String(order.insertId), subtotal, shipping, total });
   } catch (error) { await conn.rollback(); res.status(400).json({ ok: false, message: error.message || 'Failed to create order' }); }
   finally { conn.release(); }
 });

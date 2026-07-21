@@ -6,8 +6,19 @@ const pool = require('./config/db');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
+const allowedOrigins = String(process.env.CORS_ORIGIN || '*')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
 
-app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`Origin ${origin} is not allowed by CORS`));
+  },
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use('/assets', express.static(path.join(__dirname, '../..', 'bookstore_website', 'assets')));
 
