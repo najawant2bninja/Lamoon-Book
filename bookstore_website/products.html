@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>หนังสือทั้งหมด | WarmRead Store</title>
+  <link rel="stylesheet" href="assets/common.css" />
+  <link rel="stylesheet" href="products.css" />
+</head>
+<body data-page="products">
+  <div id="appNav"></div>
+  <main>
+    <section class="section">
+      <div class="container">
+        <div class="section-title"><div><h2>หนังสือทั้งหมด</h2><p>ค้นหา กรองหมวดหมู่</p></div></div>
+        <div class="card toolbar">
+          <input class="input" id="searchInput" placeholder="ค้นหาชื่อหนังสือ / ผู้แต่ง / ISBN / หมวดหมู่">
+          <select class="select" id="categorySelect"><option value="all">ทุกหมวดหมู่</option></select>
+          <!-- Stock filter removed from UI; filtering still works via code defaults -->
+        </div>
+        <div class="book-grid products-grid" id="productsGrid"></div>
+      </div>
+    </section>
+  </main>
+<div id="appFooter" class="footer"></div>
+  <script src="assets/common.js"></script>
+  <script src="products.js"></script>
+</body>
+</html>

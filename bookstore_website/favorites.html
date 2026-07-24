@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>รายการโปรด | WarmRead Store</title>
+  <link rel="stylesheet" href="assets/common.css" />
+  <link rel="stylesheet" href="favorites.css" />
+</head>
+<body data-page="favorites">
+  <div id="appNav"></div>
+  <main>
+    <section class="section"><div class="container"><div class="section-title"><div><h2>รายการโปรด</h2><p>หนังสือที่บันทึกไว้</p></div></div>
+      <div class="favorite-actions" id="favoriteActions" hidden>
+        <label class="select-all-control"><input type="checkbox" id="selectAllFavorites"> เลือกทั้งหมด</label>
+        <span class="helper" id="selectedFavoriteCount">เลือกแล้ว 0 รายการ</span>
+        <button class="btn btn-primary btn-small" id="addSelectedToCart" type="button">เพิ่มที่เลือกลงตะกร้า</button>
+      </div>
+      <div class="book-grid" id="favGrid"></div>
+    </div></section>
+  </main>
+<div id="appFooter" class="footer"></div>
+  <script src="assets/common.js"></script>
+  <script src="favorites.js"></script>
+</body>
+</html>

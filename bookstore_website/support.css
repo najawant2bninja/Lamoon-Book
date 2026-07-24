@@ -1,0 +1,11 @@
+
+.support-layout{
+  display:grid;
+  grid-template-columns:1fr 320px;
+  gap:18px;
+}
+.contact-card p{
+  color:var(--muted);
+  line-height:1.7;
+}
+@media(max-width:780px){.support-layout{grid-template-columns:1fr}}

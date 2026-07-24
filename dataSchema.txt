@@ -5,8 +5,24 @@ CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(100),
     phone VARCHAR(20),
-    role ENUM('guest','member','admin') DEFAULT 'member',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    role ENUM('guest','member','staff','admin') DEFAULT 'member',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by INT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deactivated_at DATETIME NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE SET NULL
+);
+
+CREATE TABLE auth_sessions (
+    session_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    last_used_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    revoked_at DATETIME NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
 CREATE TABLE categories (
@@ -21,11 +37,14 @@ CREATE TABLE books (
     isbn VARCHAR(20) UNIQUE,
     category_id INT,
     price DECIMAL(10,2) NOT NULL,
-    stock_quantity INT DEFAULT 0,
+    stock_quantity INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     description TEXT,
     cover_image_url VARCHAR(255),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (category_id) REFERENCES categories(category_id)
+    CONSTRAINT chk_books_price_positive CHECK (price > 0),
+    CONSTRAINT chk_books_stock_nonnegative CHECK (stock_quantity >= 0),
+    FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE SET NULL
 );
 
 CREATE TABLE favorites (
@@ -88,6 +107,7 @@ CREATE TABLE shipping_addresses (
 
 CREATE TABLE orders (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_number VARCHAR(32) NOT NULL UNIQUE,
     user_id INT NOT NULL,
     address_id INT NOT NULL,
     shipping_method_id INT NOT NULL,
@@ -95,7 +115,7 @@ CREATE TABLE orders (
     total_price DECIMAL(10,2) NOT NULL,
     order_status ENUM('pending','paid','shipping','completed','cancelled') DEFAULT 'pending',
     FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (address_id) REFERENCES shipping_addresses(address_id),
+    FOREIGN KEY (address_id) REFERENCES shipping_addresses(address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY (shipping_method_id) REFERENCES shipping_methods(shipping_method_id)
 );
 
@@ -106,7 +126,7 @@ CREATE TABLE order_items (
     quantity INT NOT NULL,
     price_at_order DECIMAL(10,2) NOT NULL,
     FOREIGN KEY (order_id) REFERENCES orders(order_id),
-    FOREIGN KEY (book_id) REFERENCES books(book_id)
+    FOREIGN KEY (book_id) REFERENCES books(book_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 CREATE TABLE order_status_history (

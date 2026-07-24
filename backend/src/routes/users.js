@@ -1,0 +1,88 @@
+const express = require('express');
+const pool = require('../config/db');
+const { hashPassword, verifyPassword } = require('../utils/password');
+const { authenticate } = require('../middleware/auth');
+const router = express.Router();
+
+function requireSelfOrAdmin(req, res, next) {
+  if (req.user.role === 'admin' || String(req.user.id) === String(req.params.userId)) return next();
+  return res.status(403).json({ ok: false, message: 'ไม่มีสิทธิ์จัดการบัญชีผู้ใช้นี้' });
+}
+
+router.put('/:userId', authenticate, requireSelfOrAdmin, async (req, res) => {
+  const { name, phone } = req.body;
+  try {
+    const fields = ['full_name = ?', 'phone = ?'];
+    const values = [name || null, phone || null];
+    values.push(req.params.userId);
+    const [result] = await pool.query(`UPDATE users SET ${fields.join(', ')} WHERE user_id = ?`, values);
+    if (!result.affectedRows) return res.status(404).json({ ok: false, message: 'User not found' });
+    res.json({ ok: true });
+  } catch (error) { res.status(500).json({ ok: false, message: 'Failed to update profile', error: error.message }); }
+});
+
+router.post('/:userId/password', authenticate, requireSelfOrAdmin, async (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+
+  if (typeof currentPassword !== 'string' || !currentPassword || typeof newPassword !== 'string' || !newPassword) {
+    return res.status(400).json({ ok: false, message: 'currentPassword and newPassword are required' });
+  }
+
+  if (newPassword.length < 8) {
+    return res.status(400).json({ ok: false, message: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร' });
+  }
+
+  let conn;
+  let transactionOpen = false;
+  try {
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+    transactionOpen = true;
+
+    const [rows] = await conn.query(
+      'SELECT password_hash FROM users WHERE user_id = ? LIMIT 1 FOR UPDATE',
+      [req.params.userId]
+    );
+    const user = rows[0];
+
+    if (!user) {
+      await conn.rollback();
+      transactionOpen = false;
+      return res.status(404).json({ ok: false, message: 'User not found' });
+    }
+
+    const validPassword = await verifyPassword(currentPassword, user.password_hash);
+    if (!validPassword) {
+      await conn.rollback();
+      transactionOpen = false;
+      return res.status(401).json({ ok: false, message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+    await conn.query('UPDATE users SET password_hash = ? WHERE user_id = ?', [passwordHash, req.params.userId]);
+    const [revokedSessions] = await conn.query(
+      `UPDATE auth_sessions
+       SET revoked_at = COALESCE(revoked_at, CURRENT_TIMESTAMP)
+       WHERE user_id = ? AND session_id <> ? AND revoked_at IS NULL`,
+      [req.params.userId, req.auth.sessionId]
+    );
+
+    await conn.commit();
+    transactionOpen = false;
+
+    return res.json({
+      ok: true,
+      message: 'เปลี่ยนรหัสผ่านสำเร็จ และออกจากระบบบนอุปกรณ์อื่นแล้ว',
+      otherSessionsRevoked: revokedSessions.affectedRows,
+    });
+  } catch (error) {
+    if (transactionOpen) {
+      try { await conn.rollback(); } catch (_) { /* Preserve the original error. */ }
+    }
+    return res.status(500).json({ ok: false, message: 'Failed to change password', error: error.message });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
+module.exports = router;

@@ -1,0 +1,95 @@
+.detail-layout{
+  display:grid;
+  grid-template-columns:320px 1fr;
+  gap:22px;
+  align-items:start;
+}
+.detail-cover{
+  width:100%;
+  aspect-ratio:4 / 5.25;
+  border-radius:8px;
+  padding:0;
+  box-shadow:none;
+  overflow:hidden;
+}
+.detail-cover-img{width:100%;height:100%;display:block;object-fit:cover}
+.detail-cover .cover-icon{
+  width:52px;
+  height:52px;
+}
+.detail-cover .cover-icon .svg-icon{width:30px;height:30px}
+.detail-cover .cover-title{font-size:32px}
+.detail-panel h1{
+  font-size:clamp(28px,4.5vw,42px);
+  line-height:1.16;
+  margin:0;
+  color:var(--brown);
+  letter-spacing:0;
+}
+.detail-meta{
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+.category-link{text-decoration:none}
+.category-link:hover{filter:brightness(.95);text-decoration:underline}
+.stock-stats{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:14px;
+  color:var(--muted);
+  margin-bottom:16px;
+}
+.stock-stats strong{
+  color:var(--brown);
+  font-weight:600;
+}
+.stock-stats .divider{
+  color:var(--line);
+}
+.detail-desc{
+  font-size:15px;
+  line-height:1.8;
+  color:var(--muted);
+}
+.book-detail-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-top:18px;
+  padding:13px 0;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  color:var(--brown);
+}
+.book-detail-label{
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.04em;
+}
+.book-detail-row strong{
+  font-size:15px;
+  letter-spacing:.06em;
+}
+.buy-box{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  margin-top:20px;
+  padding:14px;
+  border-radius:8px;
+  background:#fff4d8;
+  border:1px solid var(--line);
+}
+.recommend-title{margin-top:34px}
+@media(max-width:880px){
+  .detail-layout{grid-template-columns:1fr}
+  .detail-cover{max-width:340px}
+  .buy-box{display:block}
+  .buy-box .btn{margin-top:10px;width:100%}
+}

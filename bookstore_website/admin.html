@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>แอดมิน | WarmRead Store</title>
+    <link rel="stylesheet" href="assets/common.css" />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body data-page="admin">
+    <div id="appNav"></div>
+    <main>
+      <section class="section">
+        <div class="container">
+          <div class="section-title">
+            <div>
+              <h2>Admin Dashboard</h2>
+              <p>ยอดขาย สต็อก พนักงาน และคำสั่งซื้อ</p>
+            </div>
+          </div>
+          <div class="grid grid-4" id="adminKpis"></div>
+          <div class="admin-layout">
+            <section class="card">
+              <h3>กราฟสรุปผล</h3>
+              <div class="chart-grid">
+                <div class="chart-card">
+                  <div class="chart-header">
+                    <div>
+                      <div class="chart-title">สถานะคำสั่งซื้อ</div>
+                      <div class="chart-subtitle" id="orderStatusChartSubtitle">ภาพรวมความคืบหน้า</div>
+                    </div>
+                    <div class="chart-filter-controls">
+                      <label for="orderStatusPeriod">กรองตาม</label>
+                      <select id="orderStatusPeriod" class="chart-period-select" data-chart-period="orderStatus" aria-label="ช่วงเวลาของกราฟสถานะคำสั่งซื้อ">
+                        <option value="all" selected>ทั้งหมด</option>
+                        <option value="day">วัน</option>
+                        <option value="month">เดือน</option>
+                        <option value="year">ปี (ค.ศ.)</option>
+                      </select>
+                      <input id="orderStatusPeriodValue" class="chart-period-value" data-chart-period-value="orderStatus" type="month" aria-label="เลือกเดือนของกราฟสถานะคำสั่งซื้อ" hidden />
+                    </div>
+                  </div>
+                  <div class="chart-canvas-scroll">
+                    <canvas id="salesChart" width="560" height="300" role="img" aria-label="กราฟสถานะคำสั่งซื้อ">กราฟสถานะคำสั่งซื้อ</canvas>
+                  </div>
+                </div>
+                <div class="chart-card">
+                  <div class="chart-header">
+                    <div>
+                      <div class="chart-title">หมวดหมู่ขายได้</div>
+                      <div class="chart-subtitle" id="categoryChartSubtitle">สินค้าที่มียอดขายสูง</div>
+                    </div>
+                    <div class="chart-filter-controls">
+                      <label for="categoryPeriod">กรองตาม</label>
+                      <select id="categoryPeriod" class="chart-period-select" data-chart-period="category" aria-label="ช่วงเวลาของกราฟหมวดหมู่ขายได้">
+                        <option value="all" selected>ทั้งหมด</option>
+                        <option value="day">วัน</option>
+                        <option value="month">เดือน</option>
+                        <option value="year">ปี (ค.ศ.)</option>
+                      </select>
+                      <input id="categoryPeriodValue" class="chart-period-value" data-chart-period-value="category" type="month" aria-label="เลือกเดือนของกราฟหมวดหมู่ขายได้" hidden />
+                    </div>
+                  </div>
+                  <div class="chart-canvas-scroll">
+                    <canvas id="categoryChart" width="560" height="300" role="img" aria-label="กราฟหมวดหมู่ขายได้">กราฟหมวดหมู่ขายได้</canvas>
+                  </div>
+                </div>
+                <div class="chart-card chart-card-wide">
+                  <div class="chart-header">
+                    <div>
+                      <div class="chart-title">ประเภทการจัดส่ง</div>
+                      <div class="chart-subtitle" id="deliveryChartSubtitle">ข้อมูลตามสถานะส่งสินค้า</div>
+                    </div>
+                    <div class="chart-filter-controls">
+                      <label for="deliveryPeriod">กรองตาม</label>
+                      <select id="deliveryPeriod" class="chart-period-select" data-chart-period="delivery" aria-label="ช่วงเวลาของกราฟประเภทการจัดส่ง">
+                        <option value="all" selected>ทั้งหมด</option>
+                        <option value="day">วัน</option>
+                        <option value="month">เดือน</option>
+                        <option value="year">ปี (ค.ศ.)</option>
+                      </select>
+                      <input id="deliveryPeriodValue" class="chart-period-value" data-chart-period-value="delivery" type="month" aria-label="เลือกเดือนของกราฟประเภทการจัดส่ง" hidden />
+                    </div>
+                  </div>
+                  <div class="chart-canvas-scroll">
+                    <canvas id="deliveryChart" width="720" height="320" role="img" aria-label="กราฟประเภทการจัดส่ง">กราฟประเภทการจัดส่ง</canvas>
+                  </div>
+                  <div id="deliveryLegend" class="chart-legend"></div>
+                </div>
+              </div>
+            </section>
+            <section class="card">
+              <h3>สินค้าใกล้หมด</h3>
+              <div id="lowStock"></div>
+            </section>
+          </div>
+          <section class="section inner-section">
+            <div class="grid grid-2">
+              <div class="card">
+                <h3>จัดการสินค้า</h3>
+                <form id="productForm" class="form-grid">
+                  <input
+                    class="input"
+                    name="title"
+                    placeholder="ชื่อหนังสือ"
+                    required
+                  /><input
+                    class="input"
+                    name="author"
+                    placeholder="ผู้แต่ง"
+                    required
+                  /><input
+                    class="input"
+                    name="isbn"
+                    placeholder="ISBN"
+                    inputmode="numeric"
+                    pattern="[0-9]{13}"
+                    title="กรอกเลข ISBN"
+                    required
+                  /><input
+                    class="input"
+                    name="category"
+                    placeholder="หมวดหมู่"
+                    required
+                  /><input
+                    class="input"
+                    name="price"
+                    type="number"
+                    inputmode="decimal"
+                    min="0.01"
+                    step="0.01"
+                    placeholder="ราคา"
+                    required
+                  /><input
+                    class="input"
+                    name="stock"
+                    type="number"
+                    inputmode="numeric"
+                    min="0"
+                    step="1"
+                    placeholder="สต็อก"
+                    required
+                  />
+                  <textarea
+                    class="input"
+                    name="desc"
+                    placeholder="รายละเอียดหนังสือ"
+                    rows="4"
+                    required
+                  ></textarea>
+                  <div class="cover-upload">
+                    <div class="upload-panel">
+                      <label class="upload-btn">
+                        <span>เลือกรูปปกหนังสือ</span>
+                        <input
+                          class="input"
+                          name="coverFile"
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
+                        />
+                      </label>
+                    </div>
+                    <div class="image-preview-wrap">
+                      <div class="preview-label">ตัวอย่างปก</div>
+                      <img id="coverPreview" class="cover-preview" src="" alt="Preview รูปปก" hidden />
+                    </div>
+                  </div>
+                  <button class="btn btn-primary" type="submit">
+                    เพิ่มสินค้า
+                  </button>
+                </form>
+                <div class="table-wrap" style="margin-top: 16px">
+                  <table id="productTable"></table>
+                </div>
+              </div>
+              <div class="card">
+                <h3>จัดการพนักงาน</h3>
+                <form id="staffForm" class="form-grid">
+                  <input
+                    class="input"
+                    name="name"
+                    placeholder="ชื่อพนักงาน"
+                    autocomplete="name"
+                    required
+                  /><input
+                    class="input"
+                    name="email"
+                    type="email"
+                    placeholder="อีเมล"
+                    autocomplete="email"
+                    required
+                  /><input
+                    class="input"
+                    name="phone"
+                    type="tel"
+                    inputmode="numeric"
+                    maxlength="10"
+                    placeholder="เบอร์โทร (ไม่บังคับ)"
+                    autocomplete="tel"
+                  /><input
+                    class="input"
+                    name="password"
+                    type="password"
+                    minlength="8"
+                    placeholder="รหัสผ่าน (อย่างน้อย 8 ตัว)"
+                    autocomplete="new-password"
+                    required
+                  /><input
+                    class="input"
+                    name="confirmPassword"
+                    type="password"
+                    minlength="8"
+                    placeholder="ยืนยันรหัสผ่าน"
+                    autocomplete="new-password"
+                    required
+                  /><button class="btn btn-primary" type="submit">
+                    เพิ่มพนักงาน
+                  </button>
+                </form>
+                <div id="staffList" class="grid" style="margin-top: 16px"></div>
+              </div>
+            </div>
+          </section>
+          <section class="card">
+            <h3>การอนุมัติคำสั่งซื้อ</h3>
+            <div class="table-wrap"><table id="approvalTable"></table></div>
+          </section>
+        </div>
+      </section>
+    </main>
+    <div id="appFooter" class="footer"></div>
+    <script src="assets/common.js"></script>
+    <script src="admin.js"></script>
+  </body>
+</html>

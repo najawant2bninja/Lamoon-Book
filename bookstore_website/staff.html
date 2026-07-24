@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>พนักงาน | WarmRead Store</title>
+  <link rel="stylesheet" href="assets/common.css" />
+  <link rel="stylesheet" href="staff.css" />
+</head>
+<body data-page="staff">
+  <div id="appNav"></div>
+  <main>
+    <section class="section">
+      <div class="container">
+        <div class="section-title">
+          <div>
+            <h2>หน้าพนักงาน</h2>
+            <p>ตรวจสลิป จัดเตรียม และอัปเดตพัสดุ</p>
+          </div>
+        </div>
+        <div class="grid grid-3" id="staffKpis"></div>
+        <div class="staff-board">
+          <div class="tabs">
+            <button class="tab-btn active" data-filter="all">ทั้งหมด</button>
+            <button class="tab-btn" data-filter="pending">รอตรวจสลิป</button>
+            <button class="tab-btn" data-filter="shipping">กำลังจัดส่ง</button>
+            <button class="tab-btn" data-filter="closed">จบรายการ</button>
+          </div>
+          <div id="staffOrders" class="grid"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div id="appFooter" class="footer"></div>
+  <script src="assets/common.js"></script>
+  <script src="staff.js"></script>
+</body>
+</html>

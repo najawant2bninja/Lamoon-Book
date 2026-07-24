@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ชำระเงิน | Lamoon Book</title>
+  <link rel="stylesheet" href="assets/common.css" />
+  <link rel="stylesheet" href="payment.css" />
+</head>
+<body data-page="cart">
+  <div id="appNav"></div>
+  <main>
+    <section class="section">
+      <div class="container">
+        <div class="section-title"><div><h2>ชำระเงิน</h2><p>โอนเงินและแนบสลิป</p></div></div>
+        <div class="payment-layout">
+          <section class="card">
+            <h3>บัญชีรับชำระ</h3>
+            <div class="bank-card"><span class="bank-icon" id="bankIcon"></span><div><strong>กสิกรไทย</strong><p>123-4-56789-0<br>บริษัท ละมุน บุ๊ก จำกัด</p></div></div>
+            <div class="notice">หลังแนบสลิป สถานะจะเป็นรอตรวจสลิป และสินค้าเป็นจองสินค้า</div>
+            <form id="paymentForm" class="grid">
+              <label class="upload-box"><input type="file" id="slipInput" accept="image/*,.pdf"><span id="uploadLabel">แนบสลิปการโอนเงิน</span><small id="fileName">ยังไม่ได้เลือกไฟล์</small></label>
+              <div id="slipPreview" class="slip-preview empty">ยังไม่มีตัวอย่างสลิป</div>
+              <button class="btn btn-primary" type="submit">ยืนยันการแนบสลิป</button>
+            </form>
+          </section>
+          <aside class="card" id="paymentSummary"></aside>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div id="appFooter" class="footer"></div>
+  <script src="assets/common.js"></script>
+  <script src="payment.js"></script>
+</body>
+</html>

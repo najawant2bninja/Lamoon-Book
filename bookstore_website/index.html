@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lamoon Book</title>
+  <link rel="stylesheet" href="assets/common.css" />
+  <link rel="stylesheet" href="index.css" />
+</head>
+<body data-page="home">
+  <div id="appNav"></div>
+  <main>
+    <section class="hero-bg">
+      <div class="container">
+        <div class="hero home-hero">
+          <h1>Lamoon Book</h1>
+          <p>ค้นหา สั่งซื้อ ชำระเงิน และติดตามพัสดุในระบบเดียว</p>
+        </div>
+      </div>
+    </section>
+    <section class="section compact-section">
+      <div class="container">
+        <div class="section-title">
+          <div><h2 id="homeBooksTitle">หนังสือขายดี</h2><p id="homeBooksSubtitle">ค้นหาหนังสือจากชื่อ ผู้แต่ง ISBN หรือหมวดหมู่</p></div>
+        </div>
+        <div class="card toolbar" aria-label="ค้นหาหนังสือ">
+          <input class="input" id="homeSearchInput" type="search" placeholder="ค้นหาชื่อหนังสือ / ผู้แต่ง / ISBN / หมวดหมู่" autocomplete="off">
+          <select class="select" id="homeCategorySelect" aria-label="เลือกหมวดหมู่"><option value="all">ทุกหมวดหมู่</option></select>
+        </div>
+        <div class="featured-books-row">
+          <div class="book-grid" id="featuredBooks"></div>
+          <a class="view-all-button" href="products.html" aria-label="ดูทั้งหมด" title="ดูทั้งหมด">
+            <span class="view-all-circle">&gt;</span>
+            <span class="view-all-text">ดูหนังสือทั้งหมด</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+<div id="appFooter" class="footer"></div>
+  <script src="assets/common.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>
